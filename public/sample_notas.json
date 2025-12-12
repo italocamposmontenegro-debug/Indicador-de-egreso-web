@@ -1,0 +1,302 @@
+[
+    {
+        "rut": "12345678",
+        "codigoAsignatura": "KIN101",
+        "nombreAsignatura": "Anatomía General",
+        "nota": 5.5,
+        "semestre": 1,
+        "anio": 2022,
+        "oportunidad": 1,
+        "malla": "2020"
+    },
+    {
+        "rut": "12345678",
+        "codigoAsignatura": "KIN102",
+        "nombreAsignatura": "Fisiología Humana",
+        "nota": 6.0,
+        "semestre": 1,
+        "anio": 2022,
+        "oportunidad": 1,
+        "malla": "2020"
+    },
+    {
+        "rut": "12345678",
+        "codigoAsignatura": "KIN103",
+        "nombreAsignatura": "Biología Celular",
+        "nota": 4.5,
+        "semestre": 1,
+        "anio": 2022,
+        "oportunidad": 1,
+        "malla": "2020"
+    },
+    {
+        "rut": "12345678",
+        "codigoAsignatura": "KIN104",
+        "nombreAsignatura": "Química General",
+        "nota": 3.5,
+        "semestre": 1,
+        "anio": 2022,
+        "oportunidad": 1,
+        "malla": "2020"
+    },
+    {
+        "rut": "12345678",
+        "codigoAsignatura": "KIN104",
+        "nombreAsignatura": "Química General",
+        "nota": 4.2,
+        "semestre": 1,
+        "anio": 2023,
+        "oportunidad": 2,
+        "malla": "2020"
+    },
+    {
+        "rut": "12345678",
+        "codigoAsignatura": "KIN201",
+        "nombreAsignatura": "Biomecánica",
+        "nota": 5.8,
+        "semestre": 2,
+        "anio": 2022,
+        "oportunidad": 1,
+        "malla": "2020"
+    },
+    {
+        "rut": "12345678",
+        "codigoAsignatura": "KIN202",
+        "nombreAsignatura": "Kinesiología Básica",
+        "nota": 6.2,
+        "semestre": 2,
+        "anio": 2022,
+        "oportunidad": 1,
+        "malla": "2020"
+    },
+    {
+        "rut": "12345678",
+        "codigoAsignatura": "KIN203",
+        "nombreAsignatura": "Neurofisiología",
+        "nota": 5.0,
+        "semestre": 2,
+        "anio": 2022,
+        "oportunidad": 1,
+        "malla": "2020"
+    },
+    {
+        "rut": "12345678",
+        "codigoAsignatura": "KIN301",
+        "nombreAsignatura": "Evaluación Funcional",
+        "nota": 5.5,
+        "semestre": 3,
+        "anio": 2023,
+        "oportunidad": 1,
+        "malla": "2020"
+    },
+    {
+        "rut": "12345678",
+        "codigoAsignatura": "KIN302",
+        "nombreAsignatura": "Patología General",
+        "nota": 4.8,
+        "semestre": 3,
+        "anio": 2023,
+        "oportunidad": 1,
+        "malla": "2020"
+    },
+    {
+        "rut": "98765432",
+        "codigoAsignatura": "KIN101",
+        "nombreAsignatura": "Anatomía General",
+        "nota": 4.0,
+        "semestre": 1,
+        "anio": 2021,
+        "oportunidad": 1,
+        "malla": "2019"
+    },
+    {
+        "rut": "98765432",
+        "codigoAsignatura": "KIN102",
+        "nombreAsignatura": "Fisiología Humana",
+        "nota": 3.8,
+        "semestre": 1,
+        "anio": 2021,
+        "oportunidad": 1,
+        "malla": "2019"
+    },
+    {
+        "rut": "98765432",
+        "codigoAsignatura": "KIN102",
+        "nombreAsignatura": "Fisiología Humana",
+        "nota": 4.2,
+        "semestre": 1,
+        "anio": 2022,
+        "oportunidad": 2,
+        "malla": "2019"
+    },
+    {
+        "rut": "98765432",
+        "codigoAsignatura": "KIN103",
+        "nombreAsignatura": "Biología Celular",
+        "nota": 3.5,
+        "semestre": 1,
+        "anio": 2021,
+        "oportunidad": 1,
+        "malla": "2019"
+    },
+    {
+        "rut": "98765432",
+        "codigoAsignatura": "KIN103",
+        "nombreAsignatura": "Biología Celular",
+        "nota": 3.2,
+        "semestre": 1,
+        "anio": 2022,
+        "oportunidad": 2,
+        "malla": "2019"
+    },
+    {
+        "rut": "98765432",
+        "codigoAsignatura": "KIN103",
+        "nombreAsignatura": "Biología Celular",
+        "nota": 4.1,
+        "semestre": 1,
+        "anio": 2023,
+        "oportunidad": 3,
+        "malla": "2019"
+    },
+    {
+        "rut": "98765432",
+        "codigoAsignatura": "KIN201",
+        "nombreAsignatura": "Biomecánica",
+        "nota": 4.5,
+        "semestre": 2,
+        "anio": 2022,
+        "oportunidad": 1,
+        "malla": "2019"
+    },
+    {
+        "rut": "98765432",
+        "codigoAsignatura": "KIN202",
+        "nombreAsignatura": "Kinesiología Básica",
+        "nota": 4.0,
+        "semestre": 2,
+        "anio": 2022,
+        "oportunidad": 1,
+        "malla": "2019"
+    },
+    {
+        "rut": "11111111",
+        "codigoAsignatura": "KIN101",
+        "nombreAsignatura": "Anatomía General",
+        "nota": 6.8,
+        "semestre": 1,
+        "anio": 2020,
+        "oportunidad": 1,
+        "malla": "2020"
+    },
+    {
+        "rut": "11111111",
+        "codigoAsignatura": "KIN102",
+        "nombreAsignatura": "Fisiología Humana",
+        "nota": 6.5,
+        "semestre": 1,
+        "anio": 2020,
+        "oportunidad": 1,
+        "malla": "2020"
+    },
+    {
+        "rut": "11111111",
+        "codigoAsignatura": "KIN103",
+        "nombreAsignatura": "Biología Celular",
+        "nota": 6.7,
+        "semestre": 1,
+        "anio": 2020,
+        "oportunidad": 1,
+        "malla": "2020"
+    },
+    {
+        "rut": "11111111",
+        "codigoAsignatura": "KIN104",
+        "nombreAsignatura": "Química General",
+        "nota": 6.2,
+        "semestre": 1,
+        "anio": 2020,
+        "oportunidad": 1,
+        "malla": "2020"
+    },
+    {
+        "rut": "11111111",
+        "codigoAsignatura": "KIN201",
+        "nombreAsignatura": "Biomecánica",
+        "nota": 6.9,
+        "semestre": 2,
+        "anio": 2020,
+        "oportunidad": 1,
+        "malla": "2020"
+    },
+    {
+        "rut": "11111111",
+        "codigoAsignatura": "KIN202",
+        "nombreAsignatura": "Kinesiología Básica",
+        "nota": 6.6,
+        "semestre": 2,
+        "anio": 2020,
+        "oportunidad": 1,
+        "malla": "2020"
+    },
+    {
+        "rut": "11111111",
+        "codigoAsignatura": "KIN203",
+        "nombreAsignatura": "Neurofisiología",
+        "nota": 6.4,
+        "semestre": 2,
+        "anio": 2020,
+        "oportunidad": 1,
+        "malla": "2020"
+    },
+    {
+        "rut": "11111111",
+        "codigoAsignatura": "KIN301",
+        "nombreAsignatura": "Evaluación Funcional",
+        "nota": 6.8,
+        "semestre": 3,
+        "anio": 2021,
+        "oportunidad": 1,
+        "malla": "2020"
+    },
+    {
+        "rut": "11111111",
+        "codigoAsignatura": "KIN302",
+        "nombreAsignatura": "Patología General",
+        "nota": 6.5,
+        "semestre": 3,
+        "anio": 2021,
+        "oportunidad": 1,
+        "malla": "2020"
+    },
+    {
+        "rut": "11111111",
+        "codigoAsignatura": "KIN401",
+        "nombreAsignatura": "Rehabilitación I",
+        "nota": 6.7,
+        "semestre": 4,
+        "anio": 2021,
+        "oportunidad": 1,
+        "malla": "2020"
+    },
+    {
+        "rut": "11111111",
+        "codigoAsignatura": "KIN402",
+        "nombreAsignatura": "Práctica Clínica I",
+        "nota": 6.9,
+        "semestre": 4,
+        "anio": 2021,
+        "oportunidad": 1,
+        "malla": "2020"
+    },
+    {
+        "rut": "11111111",
+        "codigoAsignatura": "KIN501",
+        "nombreAsignatura": "Kinesiología Deportiva",
+        "nota": 7.0,
+        "semestre": 5,
+        "anio": 2022,
+        "oportunidad": 1,
+        "malla": "2020"
+    }
+]

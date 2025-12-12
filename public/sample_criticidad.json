@@ -1,0 +1,108 @@
+{
+    "2020": [
+        {
+            "codigo": "KIN101",
+            "nombre": "Anatomía General",
+            "semestre": 1,
+            "criticidad": "muy alta"
+        },
+        {
+            "codigo": "KIN102",
+            "nombre": "Fisiología Humana",
+            "semestre": 1,
+            "criticidad": "muy alta"
+        },
+        {
+            "codigo": "KIN103",
+            "nombre": "Biología Celular",
+            "semestre": 1,
+            "criticidad": "alta"
+        },
+        {
+            "codigo": "KIN104",
+            "nombre": "Química General",
+            "semestre": 1,
+            "criticidad": "media"
+        },
+        {
+            "codigo": "KIN201",
+            "nombre": "Biomecánica",
+            "semestre": 2,
+            "criticidad": "muy alta"
+        },
+        {
+            "codigo": "KIN202",
+            "nombre": "Kinesiología Básica",
+            "semestre": 2,
+            "criticidad": "muy alta"
+        },
+        {
+            "codigo": "KIN203",
+            "nombre": "Neurofisiología",
+            "semestre": 2,
+            "criticidad": "alta"
+        },
+        {
+            "codigo": "KIN301",
+            "nombre": "Evaluación Funcional",
+            "semestre": 3,
+            "criticidad": "muy alta"
+        },
+        {
+            "codigo": "KIN302",
+            "nombre": "Patología General",
+            "semestre": 3,
+            "criticidad": "alta"
+        },
+        {
+            "codigo": "KIN401",
+            "nombre": "Rehabilitación I",
+            "semestre": 4,
+            "criticidad": "muy alta"
+        },
+        {
+            "codigo": "KIN402",
+            "nombre": "Práctica Clínica I",
+            "semestre": 4,
+            "criticidad": "muy alta"
+        },
+        {
+            "codigo": "KIN501",
+            "nombre": "Kinesiología Deportiva",
+            "semestre": 5,
+            "criticidad": "alta"
+        }
+    ],
+    "2019": [
+        {
+            "codigo": "KIN101",
+            "nombre": "Anatomía General",
+            "semestre": 1,
+            "criticidad": "muy alta"
+        },
+        {
+            "codigo": "KIN102",
+            "nombre": "Fisiología Humana",
+            "semestre": 1,
+            "criticidad": "muy alta"
+        },
+        {
+            "codigo": "KIN103",
+            "nombre": "Biología Celular",
+            "semestre": 1,
+            "criticidad": "alta"
+        },
+        {
+            "codigo": "KIN201",
+            "nombre": "Biomecánica",
+            "semestre": 2,
+            "criticidad": "muy alta"
+        },
+        {
+            "codigo": "KIN202",
+            "nombre": "Kinesiología Básica",
+            "semestre": 2,
+            "criticidad": "alta"
+        }
+    ]
+}
