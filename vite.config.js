@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
-export default defineConfig({
+export defaultdefineConfig({
   plugins: [react()],
+  base: '/Indicador-de-egreso-web/',
 })
