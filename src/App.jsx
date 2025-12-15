@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { GraduationCap, Database, BarChart3 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { GraduationCap, Database, BarChart3, Sun, Moon } from 'lucide-react';
 import FileUpload from './components/FileUpload';
 import StudentSearch from './components/StudentSearch';
 import Dashboard from './components/Dashboard';
@@ -15,6 +15,15 @@ function App() {
   const [demographicData, setDemographicData] = useState(null);
   const [studentRut, setStudentRut] = useState('');
   const [activeTab, setActiveTab] = useState('upload');
+  const [theme, setTheme] = useState('dark');
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
 
   const handleDataLoaded = (type, data, filename) => {
     setLoadedFiles(prev => ({
@@ -74,6 +83,14 @@ function App() {
           </div>
 
           <nav className="header-nav">
+            <button
+              className="nav-tab"
+              onClick={toggleTheme}
+              title={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+            >
+              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+            <div className="nav-divider" style={{ width: '1px', background: 'var(--border-color)', margin: '0 8px' }}></div>
             <button
               className={`nav-tab ${activeTab === 'upload' ? 'active' : ''}`}
               onClick={() => setActiveTab('upload')}
