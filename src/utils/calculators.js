@@ -150,24 +150,40 @@ export function calculatePerformance(studentRecords) {
 }
 
 /**
- * 3. Permanence (Permanencia)
- * Formula: 1 - (yearsStudied / 5)
- * yearsStudied = (maxYear - minYear + 1) over Malla records.
+ * 3. Permanence (Permanencia) - 20%
+ * Formula: 1 - (years of study / 5)
+ * years = (maxYear - minYear + 1)
+ * SOLO usa registros EN MALLA y solo años válidos
  */
 export function calculatePermanence(studentRecords) {
   const records = getMallaRecords(studentRecords);
-  if (records.length === 0) return 1;
+  if (!records || records.length === 0) return 1;
 
-  const years = records.map(r => Number(r.anio)).filter(y => Number.isFinite(y) && y > 0);
-  if (years.length === 0) return 1;
+  // Tomar años, pero filtrando valores absurdos
+  const years = records
+    .map(r => parseInt(r.anio, 10))
+    .filter(y => Number.isFinite(y) && y >= 2000 && y <= 2100); // ajustable
+
+  if (years.length === 0) {
+    // Si no hay años válidos, no castigamos (pero deberías loguear)
+    console.warn('[Permanencia] No se encontraron años válidos en registros EN MALLA');
+    return 1;
+  }
 
   const minYear = Math.min(...years);
   const maxYear = Math.max(...years);
-  const yearsStudied = maxYear - minYear + 1;
 
+  const yearsStudied = (maxYear - minYear + 1);
+
+  // C3 = 1 - (años/5), clamp 0..1
   const permanence = 1 - (yearsStudied / 5);
-  return Math.max(0, Math.min(1, permanence));
+  const clamped = Math.max(0, Math.min(1, permanence));
+
+  console.log('[Permanencia]', { minYear, maxYear, yearsStudied, permanence: clamped });
+
+  return clamped;
 }
+
 
 /**
  * 4. Repetition Index (Repetición de ramos)
