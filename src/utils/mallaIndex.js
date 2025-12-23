@@ -10,14 +10,20 @@
  * - Remove special characters (keep alphanumeric)
  * - Collapse spaces
  */
-export function normalizeString(str) {
+export function normalizeString(str, removeSpaces = false) {
     if (!str) return '';
-    return str
+    let normalized = str
         .toLowerCase()
         .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove accents
-        .replace(/[^a-z0-9\s]/g, "") // Remove special chars
-        .replace(/\s+/g, " ") // Collapse spaces
-        .trim();
+        .replace(/[^a-z0-9\s]/g, ""); // Remove special chars
+
+    if (removeSpaces) {
+        normalized = normalized.replace(/\s+/g, "");
+    } else {
+        normalized = normalized.replace(/\s+/g, " "); // Collapse spaces
+    }
+
+    return normalized.trim();
 }
 
 /**
@@ -34,10 +40,21 @@ export function buildMallaIndex(mallaJson) {
     const addCourse = (course) => {
         if (!course) return;
 
-        // Extract fields trying common variations
-        const codigo = course.codigo || course.sigla || course.cod || '';
-        const nombre = course.nombre || course.asignatura || course.name || '';
-        const semestre = parseInt(course.semestre || course.nivel || 0, 10);
+        // Extract fields trying common variations (case-insensitive search)
+        let codigo = '';
+        let nombre = '';
+        let semestre = 0;
+
+        Object.keys(course).forEach(key => {
+            const lowerKey = key.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            if (lowerKey.includes('codigo') || lowerKey.includes('sigla') || lowerKey === 'cod') {
+                codigo = course[key];
+            } else if (lowerKey.includes('asignatura') || lowerKey.includes('nombre') || lowerKey === 'name') {
+                nombre = course[key];
+            } else if (lowerKey.includes('semestre') || lowerKey.includes('nivel') || lowerKey.includes('periodo')) {
+                semestre = parseInt(course[key], 10) || semestre;
+            }
+        });
 
         if (!codigo && !nombre) return;
 
@@ -49,10 +66,10 @@ export function buildMallaIndex(mallaJson) {
         };
 
         if (codigo) {
-            byCode.set(normalizeString(codigo), entry);
+            byCode.set(normalizeString(String(codigo), true), entry);
         }
         if (nombre) {
-            byName.set(normalizeString(nombre), entry);
+            byName.set(normalizeString(String(nombre)), entry);
         }
         allCourses.push(entry);
     };
@@ -97,12 +114,16 @@ export function buildMallaIndex(mallaJson) {
 export function matchAsignaturaToMalla(record, mallaIndex) {
     if (!mallaIndex || !record) return null;
 
-    const recordCode = normalizeString(record.codigoAsignatura || record.codigo);
+    const recordCode = normalizeString(record.codigoAsignatura || record.codigo, true);
     const recordName = normalizeString(record.nombreAsignatura || record.nombre);
 
-    // 1. Try Code Match
-    if (recordCode && mallaIndex.byCode.has(recordCode)) {
-        return mallaIndex.byCode.get(recordCode);
+    // 1. Try Code Match (using space-removed normalization)
+    if (recordCode) {
+        // We need to check against mallaIndex.byCode which should also be space-removed
+        // Let's ensure buildMallaIndex uses the same normalization
+        if (mallaIndex.byCode.has(recordCode)) {
+            return mallaIndex.byCode.get(recordCode);
+        }
     }
 
     // 2. Try Exact Name Match

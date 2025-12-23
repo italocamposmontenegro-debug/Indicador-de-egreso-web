@@ -31,10 +31,21 @@ export default function Dashboard({ studentRecords, criticalityData, curriculumD
     // FIX: Enriquecer registros antes del cálculo
     const enrichedGrades = enrichGradesWithTraza(studentRecords, curriculumData);
 
-    // Validación temporal
-    console.log("Total registros:", studentRecords.length);
-    console.log("Registros en malla:", enrichedGrades.filter(r => r.enMalla).length);
+    // Validación temporal extendida
+    console.log("--- DEBUG IE CALCULATION ---");
+    console.log("Curriculum Data disponible:", !!curriculumData);
+    if (curriculumData) {
+        console.log("Muestra Curriculum (1er item):", Array.isArray(curriculumData) ? curriculumData[0] : 'Object keys: ' + Object.keys(curriculumData).join(', '));
+    }
+    console.log("Total registros estudiante:", studentRecords.length);
+    console.log("Muestra Registro (1er item):", studentRecords[0]);
+    const inMalla = enrichedGrades.filter(r => r.enMalla);
+    console.log("Registros en malla encontrados:", inMalla.length);
+    if (inMalla.length > 0) {
+        console.log("Muestra Registro en Malla:", inMalla[0]);
+    }
     console.log("Semestre curricular max:", Math.max(...enrichedGrades.filter(r => r.enMalla).map(r => r.semestreCurricular || 0), 0));
+    console.log("----------------------------");
 
     const indicatorResult = calculateExitIndicator(
         enrichedGrades,
