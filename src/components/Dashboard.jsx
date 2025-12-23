@@ -5,6 +5,7 @@ import RadarChart from './RadarChart';
 import ExportPanel from './ExportPanel';
 import { calculateExitIndicator } from '../utils/calculators';
 import { generateRecommendations, getSummaryText } from '../utils/recommendations';
+import { enrichGradesWithTraza } from '../utils/parsers';
 
 const componentIcons = {
     approvalRate: BookOpen,
@@ -27,8 +28,16 @@ export default function Dashboard({ studentRecords, criticalityData, curriculumD
         );
     }
 
+    // FIX: Enriquecer registros antes del cálculo
+    const enrichedGrades = enrichGradesWithTraza(studentRecords, curriculumData);
+
+    // Validación temporal
+    console.log("Total registros:", studentRecords.length);
+    console.log("Registros en malla:", enrichedGrades.filter(r => r.enMalla).length);
+    console.log("Semestre curricular max:", Math.max(...enrichedGrades.filter(r => r.enMalla).map(r => r.semestreCurricular || 0), 0));
+
     const indicatorResult = calculateExitIndicator(
-        studentRecords,
+        enrichedGrades,
         criticalityData,
         curriculumData,
         demographicData

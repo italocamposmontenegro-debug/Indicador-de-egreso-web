@@ -30,6 +30,7 @@ export function parseGradesExcel(file) {
                         else if (lowerKey.includes('oportunidad') || lowerKey.includes('intento')) normalized.oportunidad = parseInt(row[key]) || 1;
                         else if (lowerKey.includes('malla') || lowerKey.includes('plan')) normalized.malla = row[key];
                         else if (lowerKey.includes('estado') || lowerKey.includes('aprobado')) normalized.estado = row[key];
+                        else if (lowerKey.includes('periodo')) normalized.periodo = row[key];
                     });
                     // Derivar anio y semestre desde PERIODO si no vienen explícitos
                     if (normalized.periodo) {
