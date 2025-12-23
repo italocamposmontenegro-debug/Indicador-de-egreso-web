@@ -71,10 +71,31 @@ export default function Dashboard({ studentRecords, criticalityData, curriculumD
                     background: 'var(--card-bg)',
                     padding: '1.5rem',
                     borderRadius: '8px',
-                    maxWidth: '600px',
+                    maxWidth: '800px',
                     margin: '2rem auto',
-                    border: '1px solid var(--border-color)'
+                    border: '1px solid var(--border-color)',
+                    fontSize: '0.9rem'
                 }}>
+                    <h4 style={{ marginBottom: '1rem', color: 'var(--primary-color)' }}>Información de Diagnóstico:</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+                        <div>
+                            <strong>Total filas notas:</strong> {totalFilasNotas}<br />
+                            <strong>Asignaturas únicas:</strong> {totalAsignaturasUnicasNotas}<br />
+                            <strong>Ramos en malla:</strong> {totalRamosMalla}
+                        </div>
+                        <div>
+                            <strong>Curriculum cargado:</strong> {curriculumData ? 'Sí' : 'No'}<br />
+                            <strong>Estructura:</strong> {Array.isArray(curriculumData) ? 'Array' : 'Objeto'}<br />
+                        </div>
+                    </div>
+
+                    <h5 style={{ marginBottom: '0.5rem' }}>Top 10 Asignaturas no encontradas en malla:</h5>
+                    <ul style={{ paddingLeft: '1.5rem', marginBottom: '1.5rem', color: 'var(--text-muted)' }}>
+                        {topUnmatched.slice(0, 10).map(([name, count], i) => (
+                            <li key={i}>{name} ({count} registros)</li>
+                        ))}
+                    </ul>
+
                     <h4 style={{ marginBottom: '1rem' }}>Sugerencias:</h4>
                     <ul style={{ paddingLeft: '1.5rem', lineHeight: '1.6' }}>
                         <li>Verifica que el archivo de <strong>Malla Curricular</strong> sea el correcto.</li>

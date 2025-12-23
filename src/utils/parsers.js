@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { buildMallaIndex, matchAsignaturaToMalla } from './mallaIndex.js';
+import { buildMallaIndex, matchAsignaturaToMalla, normalizeCourseName } from './mallaIndex.js';
 
 /**
  * Parse an Excel file (.xlsx) containing student grades
@@ -20,17 +20,17 @@ export function parseGradesExcel(file) {
                 const normalizedData = jsonData.map(row => {
                     const normalized = {};
                     Object.keys(row).forEach(key => {
-                        const lowerKey = key.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                        if (lowerKey.includes('rut')) normalized.rut = String(row[key]).replace(/\./g, '').split('-')[0];
-                        else if (lowerKey.includes('codigo') || lowerKey.includes('sigla')) normalized.codigoAsignatura = row[key];
-                        else if (lowerKey.includes('asignatura') || lowerKey.includes('nombre')) normalized.nombreAsignatura = row[key];
-                        else if (lowerKey.includes('nota') || lowerKey.includes('calificacion')) normalized.nota = parseFloat(row[key]) || 0;
-                        else if (lowerKey.includes('semestre')) normalized.semestre = parseInt(row[key]) || 0;
-                        else if (lowerKey.includes('año') || lowerKey.includes('anio') || lowerKey.includes('year')) normalized.anio = parseInt(row[key]) || 0;
-                        else if (lowerKey.includes('oportunidad') || lowerKey.includes('intento')) normalized.oportunidad = parseInt(row[key]) || 1;
-                        else if (lowerKey.includes('malla') || lowerKey.includes('plan')) normalized.malla = row[key];
-                        else if (lowerKey.includes('estado') || lowerKey.includes('aprobado')) normalized.estado = row[key];
-                        else if (lowerKey.includes('periodo')) normalized.periodo = row[key];
+                        const normKey = normalizeCourseName(key, true);
+                        if (normKey.includes('RUT')) normalized.rut = String(row[key]).replace(/\./g, '').split('-')[0];
+                        else if (normKey.includes('CODIGO') || normKey.includes('SIGLA')) normalized.codigoAsignatura = row[key];
+                        else if (normKey.includes('ASIGNATURA') || normKey.includes('NOMBRE')) normalized.nombreAsignatura = row[key];
+                        else if (normKey.includes('NOTA') || normKey.includes('CALIFICACION')) normalized.nota = parseFloat(row[key]) || 0;
+                        else if (normKey.includes('SEMESTRE')) normalized.semestre = parseInt(row[key]) || 0;
+                        else if (normKey.includes('ANIO') || normKey.includes('YEAR')) normalized.anio = parseInt(row[key]) || 0;
+                        else if (normKey.includes('OPORTUNIDAD') || normKey.includes('INTENTO')) normalized.oportunidad = parseInt(row[key]) || 1;
+                        else if (normKey.includes('MALLA') || normKey.includes('PLAN')) normalized.malla = row[key];
+                        else if (normKey.includes('ESTADO') || normKey.includes('APROBADO')) normalized.estado = row[key];
+                        else if (normKey.includes('PERIODO')) normalized.periodo = row[key];
                     });
                     // Derivar anio y semestre desde PERIODO si no vienen explícitos
                     if (normalized.periodo) {
@@ -86,7 +86,7 @@ export function parseGradesCSV(file) {
                     return;
                 }
 
-                const headers = lines[0].split(/[,;]/).map(h => h.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+                const headers = lines[0].split(/[,;]/).map(h => normalizeCourseName(h, true));
                 const data = [];
 
                 for (let i = 1; i < lines.length; i++) {
@@ -166,17 +166,17 @@ export function parseJSON(file) {
                         const normalizedData = data.map(row => {
                             const obj = {};
                             Object.keys(row).forEach(key => {
-                                const lowerKey = key.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                                if (lowerKey.includes('rut')) obj.rut = String(row[key]).replace(/\./g, '').split('-')[0];
-                                else if (lowerKey.includes('codigo') || lowerKey.includes('sigla')) obj.codigoAsignatura = row[key];
-                                else if (lowerKey.includes('asignatura') || lowerKey.includes('nombre')) obj.nombreAsignatura = row[key];
-                                else if (lowerKey.includes('nota') || lowerKey.includes('calificacion')) obj.nota = parseFloat(row[key]) || 0;
-                                else if (lowerKey.includes('semestre')) obj.semestre = parseInt(row[key]) || 0;
-                                else if (lowerKey.includes('año') || lowerKey.includes('anio') || lowerKey.includes('year')) obj.anio = parseInt(row[key]) || 0;
-                                else if (lowerKey.includes('oportunidad') || lowerKey.includes('intento')) obj.oportunidad = parseInt(row[key]) || 1;
-                                else if (lowerKey.includes('malla') || lowerKey.includes('plan')) obj.malla = row[key];
-                                else if (lowerKey.includes('estado') || lowerKey.includes('aprobado')) obj.estado = row[key];
-                                else if (lowerKey.includes('periodo')) obj.periodo = row[key] || row.PERIODO;
+                                const normKey = normalizeCourseName(key, true);
+                                if (normKey.includes('RUT')) obj.rut = String(row[key]).replace(/\./g, '').split('-')[0];
+                                else if (normKey.includes('CODIGO') || normKey.includes('SIGLA')) obj.codigoAsignatura = row[key];
+                                else if (normKey.includes('ASIGNATURA') || normKey.includes('NOMBRE')) obj.nombreAsignatura = row[key];
+                                else if (normKey.includes('NOTA') || normKey.includes('CALIFICACION')) obj.nota = parseFloat(row[key]) || 0;
+                                else if (normKey.includes('SEMESTRE')) obj.semestre = parseInt(row[key]) || 0;
+                                else if (normKey.includes('ANIO') || normKey.includes('YEAR')) obj.anio = parseInt(row[key]) || 0;
+                                else if (normKey.includes('OPORTUNIDAD') || normKey.includes('INTENTO')) obj.oportunidad = parseInt(row[key]) || 1;
+                                else if (normKey.includes('MALLA') || normKey.includes('PLAN')) obj.malla = row[key];
+                                else if (normKey.includes('ESTADO') || normKey.includes('APROBADO')) obj.estado = row[key];
+                                else if (normKey.includes('PERIODO')) obj.periodo = row[key] || row.PERIODO;
                             });
 
                             // Derivar anio y semestre desde PERIODO si no vienen explícitos

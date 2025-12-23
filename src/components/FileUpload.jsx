@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { Upload, FileText, X, CheckCircle, AlertCircle } from 'lucide-react';
 import { parseFile } from '../utils/parsers';
+import { normalizeCourseName } from '../utils/mallaIndex';
 
 export default function FileUpload({ onDataLoaded, loadedFiles }) {
     const [dragActive, setDragActive] = useState(false);
@@ -70,25 +71,37 @@ export default function FileUpload({ onDataLoaded, loadedFiles }) {
     const detectFileType = (filename, data) => {
         const lowerName = filename.toLowerCase();
 
-        // Check for criticality file
+        // Check data structure first (more reliable than filename)
+        if (Array.isArray(data) && data.length > 0) {
+            const sample = data[0];
+            const keys = Object.keys(sample).map(k => normalizeCourseName(k, true));
+
+            // Grades usually have RUT and NOTA
+            if (keys.some(k => k.includes('RUT')) && keys.some(k => k.includes('NOTA') || k.includes('CALIFICACION'))) {
+                return 'grades';
+            }
+
+            // Criticality usually has CODIGO and CRITICIDAD
+            if (keys.some(k => k.includes('CODIGO')) && keys.some(k => k.includes('CRITICIDAD'))) {
+                return 'criticality';
+            }
+        } else if (data && typeof data === 'object') {
+            // Curriculum usually has semestres or nested structures
+            const keys = Object.keys(data).map(k => k.toLowerCase());
+            if (keys.some(k => k.includes('semestre') || k.includes('plan') || k.includes('malla'))) {
+                return 'curriculum';
+            }
+        }
+
+        // Fallback to filename
         if (lowerName.includes('criticidad') || lowerName.includes('critical')) {
             return 'criticality';
         }
 
-        // Check for curriculum/malla file
         if (lowerName.includes('malla') || lowerName.includes('curriculum') || lowerName.includes('estructura')) {
             return 'curriculum';
         }
 
-        // Check data structure for grades (has rut/nota columns)
-        if (Array.isArray(data) && data.length > 0) {
-            const sample = data[0];
-            if (sample.rut || sample.nota || sample.codigoAsignatura) {
-                return 'grades';
-            }
-        }
-
-        // Default to grades for Excel/CSV
         if (lowerName.endsWith('.xlsx') || lowerName.endsWith('.csv')) {
             return 'grades';
         }
