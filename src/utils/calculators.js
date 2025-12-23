@@ -251,6 +251,9 @@ export function calculateRelevance(studentRecords, curriculumData) {
 
     const ultimoSemestreAlcanzado = semestres.length > 0 ? Math.max(...semestres) : 0;
 
+    // Store for use in stats
+    calculateExitIndicator.ultimoSemestreAlcanzado = ultimoSemestreAlcanzado;
+
     // Find Plan Max Semestre
     // From curriculumData
     let maxPlan = 10; // Default
@@ -410,12 +413,29 @@ export function calculateExitIndicator(studentRecords, criticalityData, curricul
     }
 
     // Stats for UI
-    const totalMallaCount = new Set(records.map(r => r.codigoMalla)).size;
-    const approvedMallaCount = records.filter(r => r.nota >= 4.0).length; // Simplified
+    const uniqueCoursesTaken = new Set(records.map(r => r.codigoMalla || r.nombreMalla));
+    const totalMallaCount = uniqueCoursesTaken.size;
+
+    // Count unique approved courses
+    const approvedCoursesSet = new Set();
+    records.forEach(r => {
+        const isApproved = r.nota >= 4.0 || (r.estado && r.estado.toLowerCase().includes('aprob'));
+        if (isApproved) {
+            approvedCoursesSet.add(r.codigoMalla || r.nombreMalla);
+        }
+    });
+    const approvedMallaCount = approvedCoursesSet.size;
 
     // Calculate Average Grade for display
-    const grades = records.filter(r => r.nota > 0);
-    const avgGrade = grades.length ? (grades.reduce((s, r) => s + r.nota, 0) / grades.length) : 0;
+    const bestGrades = new Map();
+    records.forEach(r => {
+        const key = r.codigoMalla || r.nombreMalla;
+        if (!bestGrades.has(key) || r.nota > bestGrades.get(key)) {
+            bestGrades.set(key, r.nota);
+        }
+    });
+    const grades = Array.from(bestGrades.values()).filter(g => g > 0);
+    const avgGrade = grades.length ? (grades.reduce((s, g) => s + g, 0) / grades.length) : 0;
 
     return {
         components,
@@ -427,7 +447,8 @@ export function calculateExitIndicator(studentRecords, criticalityData, curricul
             totalCourses: totalMallaCount,
             approvedCourses: approvedMallaCount,
             averageGrade: avgGrade.toFixed(2),
-            coveragePct: (totalMallaCount / 30) * 100 // Estimate
+            currentSemester: calculateExitIndicator.ultimoSemestreAlcanzado || 0,
+            coveragePct: (totalMallaCount / 50) * 100 // Better estimate
         }
     };
 }
