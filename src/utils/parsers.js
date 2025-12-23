@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx';
+import { buildMallaIndex, matchAsignaturaToMalla } from './mallaIndex.js';
 
 /**
  * Parse an Excel file (.xlsx) containing student grades
@@ -30,6 +31,29 @@ export function parseGradesExcel(file) {
                         else if (lowerKey.includes('malla') || lowerKey.includes('plan')) normalized.malla = row[key];
                         else if (lowerKey.includes('estado') || lowerKey.includes('aprobado')) normalized.estado = row[key];
                     });
+                    // Derivar anio y semestre desde PERIODO si no vienen explícitos
+                    if (normalized.periodo) {
+                        const pStr = String(normalized.periodo).replace(/\D/g, '');
+
+                        // Año
+                        if (!normalized.anio || normalized.anio === 0) {
+                            const year = parseInt(pStr.slice(0, 4), 10);
+                            if (!isNaN(year)) normalized.anio = year;
+                        }
+
+                        // Semestre académico
+                        if (!normalized.semestre || normalized.semestre === 0) {
+                            const semCode = pStr.slice(-2);
+                            if (semCode === '10') normalized.semestre = 1;
+                            else if (semCode === '20') normalized.semestre = 2;
+                            else normalized.semestre = 1;
+                        }
+                    }
+
+                    // Fallback seguro
+                    normalized.semestre = normalized.semestre || 1;
+                    normalized.anio = normalized.anio || 0;
+
                     // Default values
                     normalized.oportunidad = normalized.oportunidad || 1;
                     normalized.malla = normalized.malla || 'default';
@@ -79,7 +103,31 @@ export function parseGradesCSV(file) {
                         else if (header.includes('oportunidad') || header.includes('intento')) row.oportunidad = parseInt(value) || 1;
                         else if (header.includes('malla') || header.includes('plan')) row.malla = value;
                         else if (header.includes('estado')) row.estado = value;
+                        else if (header.includes('periodo')) row.periodo = value;
                     });
+
+                    // Derivar anio y semestre desde PERIODO si no vienen explícitos
+                    if (row.periodo) {
+                        const pStr = String(row.periodo).replace(/\D/g, '');
+
+                        // Año
+                        if (!row.anio || row.anio === 0) {
+                            const year = parseInt(pStr.slice(0, 4), 10);
+                            if (!isNaN(year)) row.anio = year;
+                        }
+
+                        // Semestre académico
+                        if (!row.semestre || row.semestre === 0) {
+                            const semCode = pStr.slice(-2);
+                            if (semCode === '10') row.semestre = 1;
+                            else if (semCode === '20') row.semestre = 2;
+                            else row.semestre = 1;
+                        }
+                    }
+
+                    // Fallback seguro
+                    row.semestre = row.semestre || 1;
+                    row.anio = row.anio || 0;
 
                     row.oportunidad = row.oportunidad || 1;
                     row.malla = row.malla || 'default';
@@ -115,17 +163,43 @@ export function parseJSON(file) {
                     if (hasGradeFields) {
                         // Normalize the grade data
                         const normalizedData = data.map(row => {
-                            return {
+                            const obj = {
                                 rut: String(row.rut || row.RUT || '').replace(/\./g, '').split('-')[0],
                                 codigoAsignatura: row.codigoAsignatura || row.codigo || row.sigla || row.Codigo || '',
                                 nombreAsignatura: row.nombreAsignatura || row.nombre || row.Nombre || row.asignatura || '',
                                 nota: parseFloat(row.nota || row.Nota || row.calificacion || 0) || 0,
-                                semestre: parseInt(row.semestre || row.Semestre || row.semester || 1, 10) || 1,
+                                semestre: parseInt(row.semestre || row.Semestre || row.semester || 0, 10) || 0,
                                 anio: parseInt(row.anio || row.año || row.Anio || row.year || 0, 10) || 0,
                                 oportunidad: parseInt(row.oportunidad || row.intento || row.Oportunidad || 1, 10) || 1,
                                 malla: row.malla || row.plan || row.Malla || 'default',
-                                estado: row.estado || row.Estado || ''
+                                estado: row.estado || row.Estado || '',
+                                periodo: row.periodo || row.Periodo || row.PERIODO
                             };
+
+                            // Derivar anio y semestre desde PERIODO si no vienen explícitos
+                            if (obj.periodo) {
+                                const pStr = String(obj.periodo).replace(/\D/g, '');
+
+                                // Año
+                                if (!obj.anio || obj.anio === 0) {
+                                    const year = parseInt(pStr.slice(0, 4), 10);
+                                    if (!isNaN(year)) obj.anio = year;
+                                }
+
+                                // Semestre académico
+                                if (!obj.semestre || obj.semestre === 0) {
+                                    const semCode = pStr.slice(-2);
+                                    if (semCode === '10') obj.semestre = 1;
+                                    else if (semCode === '20') obj.semestre = 2;
+                                    else obj.semestre = 1;
+                                }
+                            }
+
+                            // Fallback seguro
+                            obj.semestre = obj.semestre || 1;
+                            obj.anio = obj.anio || 0;
+
+                            return obj;
                         });
                         resolve(normalizedData);
                         return;
@@ -185,4 +259,25 @@ export function getStudentRecords(gradesData, rut) {
     return gradesData.filter(record =>
         String(record.rut).replace(/\./g, '').split('-')[0] === normalizedRut
     );
+}
+/**
+ * Enrich grades data with curriculum info
+ * Adds: enMalla (bool), semestreCurricular, codigoMalla, nombreMalla
+ */
+export function enrichGradesWithTraza(gradesData, curriculumData) {
+    if (!curriculumData || !gradesData) return gradesData;
+
+    const mallaIndex = buildMallaIndex(curriculumData);
+
+    return gradesData.map(record => {
+        const match = matchAsignaturaToMalla(record, mallaIndex);
+
+        return {
+            ...record,
+            enMalla: Boolean(match),
+            semestreCurricular: match ? match.semestre : null,
+            codigoMalla: match ? match.codigo : null,
+            nombreMalla: match ? match.nombre : null
+        };
+    });
 }

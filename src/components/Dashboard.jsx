@@ -51,6 +51,26 @@ export default function Dashboard({ studentRecords, criticalityData, curriculumD
                     <span className="malla-badge">Malla: {malla}</span>
                 </div>
 
+                {stats.coveragePct < 80 && (
+                    <div className="alert-warning" style={{
+                        margin: '1rem 0',
+                        padding: '1rem',
+                        backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                        border: '1px solid #ffc107',
+                        borderRadius: '8px',
+                        display: 'flex',
+                        gap: '10px',
+                        color: 'var(--text-color)'
+                    }}>
+                        <span>⚠️</span>
+                        <span>
+                            <strong>Baja cobertura de malla ({Math.round(stats.coveragePct)}%)</strong>:
+                            Solo se detectaron {stats.totalCourses} cursos de malla.
+                            Revise que los nombres/códigos en el Excel coincidan con la estructura curricular cargada.
+                        </span>
+                    </div>
+                )}
+
                 <div className={`main-score-card ${levelClass}`}>
                     <div className="main-score-visual">
                         <div className="score-circle">

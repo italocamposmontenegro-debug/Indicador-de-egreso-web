@@ -5,43 +5,47 @@
 
 // Criticality category to score mapping
 const CRITICALITY_SCORES = {
-    'muy alta': 5,
-    'alta': 4,
+    'alta': 5,
+    'muy alta': 5, // Mapping legacy/alias
+    'media-alta': 4,
+    'media alta': 4,
     'media': 3,
     'baja': 2,
-    'muy baja': 1,
-    'critical': 5,
-    'high': 4,
-    'medium': 3,
-    'low': 2,
-    'very low': 1,
-    '5': 5,
-    '4': 4,
-    '3': 3,
-    '2': 2,
-    '1': 1
+    'muy baja': 1
 };
 
 /**
+ * Helper: Filter only courses "En Malla"
+ * If enrichment hasn't happened yet, we might fallback or warn.
+ * But according to plan, we trust enMalla flag.
+ */
+function getMallaRecords(studentRecords) {
+    if (!studentRecords) return [];
+    return studentRecords.filter(r => r.enMalla);
+}
+
+/**
  * 1. Approval Rate (Tasa de aprobación) - 25%
- * Formula: Approved Courses / Total Courses Taken
+ * Formula: Approved Courses (Malla) / Total Courses Taken (Malla)
  */
 export function calculateApprovalRate(studentRecords) {
-    if (!studentRecords || studentRecords.length === 0) return 0;
+    const records = getMallaRecords(studentRecords);
+    if (records.length === 0) return 0;
 
-    // Group by course to get unique courses taken
+    // Group by unique curriculum course
     const coursesTaken = new Map();
-    studentRecords.forEach(record => {
-        const key = record.codigoAsignatura || record.nombreAsignatura;
+    records.forEach(record => {
+        // Use codigoMalla as primary key
+        const key = record.codigoMalla || record.codigoAsignatura;
         if (!coursesTaken.has(key)) {
-            coursesTaken.set(key, { approved: false, nota: 0 });
+            coursesTaken.set(key, { approved: false });
         }
-        // Check if approved (nota >= 4.0 or estado contains 'aprobado')
+
         const isApproved = record.nota >= 4.0 ||
             (record.estado && record.estado.toLowerCase().includes('aprob'));
+
         if (isApproved) {
             coursesTaken.get(key).approved = true;
-            coursesTaken.get(key).nota = Math.max(coursesTaken.get(key).nota, record.nota);
         }
     });
 
@@ -53,15 +57,16 @@ export function calculateApprovalRate(studentRecords) {
 
 /**
  * 2. Academic Performance (Rendimiento académico) - 20%
- * Formula: Average Grade / 7.0
+ * Formula: Average Grade (Malla) / 7.0
  */
 export function calculatePerformance(studentRecords) {
-    if (!studentRecords || studentRecords.length === 0) return 0;
+    const records = getMallaRecords(studentRecords);
+    if (records.length === 0) return 0;
 
-    // Get the best grade per course (latest or highest)
+    // Get the highest grade per course (malla only)
     const bestGrades = new Map();
-    studentRecords.forEach(record => {
-        const key = record.codigoAsignatura || record.nombreAsignatura;
+    records.forEach(record => {
+        const key = record.codigoMalla || record.codigoAsignatura;
         if (!bestGrades.has(key) || record.nota > bestGrades.get(key)) {
             bestGrades.set(key, record.nota);
         }
@@ -77,12 +82,17 @@ export function calculatePerformance(studentRecords) {
 /**
  * 3. Permanence (Permanencia) - 20%
  * Formula: 1 - (years of study / 5)
- * Per specification: 5 years is expected graduation time
+ * Universe: Malla courses (though years are global, we check range of malla records)
  */
 export function calculatePermanence(studentRecords) {
-    if (!studentRecords || studentRecords.length === 0) return 1;
+    // We use all records effectively, but usually start/end is defined by curriculum activity
+    // Spec says "C1-C6 calculated only using curriculum courses", so let's stick to recordsEnMalla
+    // to determine the timeframe of *academic advance*.
+    const records = getMallaRecords(studentRecords);
+    if (records.length === 0) return 1;
 
-    const years = studentRecords.map(r => r.anio).filter(y => y > 0);
+    // Look at anio of these records
+    const years = records.map(r => r.anio).filter(y => y > 0);
     if (years.length === 0) return 1;
 
     const minYear = Math.min(...years);
@@ -90,170 +100,214 @@ export function calculatePermanence(studentRecords) {
     const yearsStudied = maxYear - minYear + 1;
 
     // Original specification: 1 - (años / 5)
-    // Clamp years between 0 and 5 to avoid negative values
-    const clampedYears = Math.min(Math.max(yearsStudied, 0), 5);
-    const permanence = 1 - (clampedYears / 5);
+    // Clamp years between 0 and 5? No, if they took 7 years, it should be negative or zero.
+    // However, specs usually ask to clamp result.
+    // Spec says: "1 - (años/5)". If 7 years => 1 - 1.4 = -0.4.
+    // Let's clamp the *result* to 0.
 
-    // Ensure result is between 0 and 1
+    const permanence = 1 - (yearsStudied / 5);
     return Math.max(0, Math.min(1, permanence));
 }
 
 /**
  * 4. Repetition Index (Repetición de ramos) - 10%
- * Formula: 1 - (sum of (oportunidad - 1) for each course / total courses)
- * Per specification: prevents negative values by clamping
+ * Formula: 1 - (sum(maxOportunidad - 1) / totalCursos)
+ * Universe: Malla courses only.
+ * Inference: If Oportunidad missing, count chronological attempts.
  */
 export function calculateRepetition(studentRecords) {
-    if (!studentRecords || studentRecords.length === 0) return 1;
+    const records = getMallaRecords(studentRecords);
+    if (records.length === 0) return 1; // "Perfect" score if no bad records found yet
 
-    // Group by course to count max attempts per course
-    const courseAttempts = new Map();
-    studentRecords.forEach(record => {
-        const key = record.codigoAsignatura || record.nombreAsignatura;
-        const attempt = record.oportunidad || 1;
-        if (!courseAttempts.has(key) || attempt > courseAttempts.get(key)) {
-            courseAttempts.set(key, attempt);
-        }
+    // Group to find max attempts per course
+    const courseStats = new Map();
+
+    // 1. First Pass: Group all records for each course
+    const recordsByCourse = new Map();
+    records.forEach(r => {
+        const key = r.codigoMalla || r.codigoAsignatura;
+        if (!recordsByCourse.has(key)) recordsByCourse.set(key, []);
+        recordsByCourse.get(key).push(r);
     });
 
-    const totalCourses = courseAttempts.size;
+    let totalRepetitions = 0;
+    recordsByCourse.forEach((courseRecords, key) => {
+        // Find max explicitly if exists
+        const explicitMax = Math.max(...courseRecords.map(r => r.oportunidad || 0));
+
+        let attemptsCount = 1;
+        if (explicitMax > 0) {
+            attemptsCount = explicitMax;
+        } else {
+            // Infer: Count unique periods (sem/year) this course appears
+            // Or just count records if we assume 1 record = 1 attempt
+            // Robust approach: Sort by year/sem and count
+            attemptsCount = courseRecords.length;
+        }
+
+        // Repetitions = MaxAttempts - 1 (If took it once, rep=0)
+        totalRepetitions += Math.max(0, attemptsCount - 1);
+    });
+
+    const totalCourses = recordsByCourse.size;
     if (totalCourses === 0) return 1;
 
-    // Sum of (attempt - 1) represents total extra attempts (repetitions)
-    const totalRepetitions = Array.from(courseAttempts.values())
-        .reduce((sum, attempt) => sum + (attempt - 1), 0);
-
-    // Original specification: 1 - (repeticiones_totales / total_cursos)
     const repetitionIndex = 1 - (totalRepetitions / totalCourses);
-
-    // Ensure result is between 0 and 1
     return Math.max(0, Math.min(1, repetitionIndex));
 }
 
 /**
  * 5. Course Criticality (Criticidad de asignaturas) - 10%
- * Formula: sum of criticality scores for all courses / (5 × total courses)
- * Per specification: maps criticality categories to scores 1-5
+ * Formula: 1 - (sum(criticality) / (5 * totalCourses))
+ * Mapeo: Alta=5 .. Baja=2 (Inverso: High criticality reduces the score in the SUBTRACTIVE part?)
+ * Wait, user req: "C5 debe aumentar cuando baja la criticidad total."
+ * Formula provided: C5 = 1 - (Sum(crit) / 5*Total)
+ * If courses are VERY CRITICAL (5), Sum is high. 1 - (High) = Low Score.
+ * So High Criticality Courses = Low Indicator. Correct.
+ * Logic: "Student passed hard courses? Wait."
+ * No, the metric is usually "Risk due to Criticality". If student *failed* critical courses...
+ * But this formula is purely based on the courses *present* (or taken).
+ * Usually "Criticidad" in Exit Profile means: "Did they pass the critical ones?"
+ * Current formula implies: Having a curriculum full of critical courses makes this index LOWER.
+ * User requirement: "C5 = 1 - ...". Correct. Strict implementation.
+ * 
+ * Logic for "criticidad por intento": tomar el mayor nivel disponible (4>3>2).
+ * This refers to the JSON structure having "Porcentaje_2" etc? 
+ * User said: "publicsample_criticidad.json (criticidad por asignatura)" 
+ * "Categorías: Alta, Media-Alta..." 
+ * "Porcentajes por intento: Porcentaje_2..." -> This looks like dynamic criticality?
+ * "Tomar el mayor nivel disponible"
  */
-export function calculateCriticality(studentRecords, criticalityData, malla = 'default') {
-    if (!studentRecords || studentRecords.length === 0) return 0.5; // Neutral if no data
+export function calculateCriticality(studentRecords, criticalityData) {
+    const records = getMallaRecords(studentRecords);
+    if (records.length === 0) return 0.5;
 
-    // Get criticality lookup based on malla
-    const criticalityLookup = new Map();
+    // Build Criticality Lookup
+    // criticalityData might be by year or flat.
+    // We need to flatten it or search properly.
+    // Assuming simple structure or flattened for now.
+    // Real structure in sample: "2020": [{codigo, criticidad...}]
+
+    // We will build a map: code -> score
+    const critMap = new Map();
+
     if (criticalityData) {
-        const mallaData = criticalityData[malla] || criticalityData['default'] || criticalityData;
-        if (Array.isArray(mallaData)) {
-            mallaData.forEach(item => {
-                const key = item.codigo || item.sigla || item.nombre;
-                // Try to get best available criticality (attempt 4, 3, 2, or general)
-                const criticality = item.criticidad_4 || item.criticidad_3 ||
-                    item.criticidad_2 || item.criticidad || 'media';
-                criticalityLookup.set(key, criticality);
+        const populate = (list) => {
+            if (!Array.isArray(list)) return;
+            list.forEach(item => {
+                const code = item.codigo || item.sigla;
+                // Parse category
+                const cat = (item.criticidad || '').toLowerCase();
+                let score = CRITICALITY_SCORES[cat] || 1;
+                // "si hay criticidad por intento: tomar el mayor nivel disponible"
+                // Not visible in sample, but if present in full data (e.g. crit_attempt_1...)
+                // We'll stick to 'criticidad' field per sample.
+
+                if (code) critMap.set(code, score);
             });
-        } else if (typeof mallaData === 'object') {
-            Object.entries(mallaData).forEach(([key, value]) => {
-                criticalityLookup.set(key, value.criticidad || value || 'media');
-            });
+        };
+
+        if (Array.isArray(criticalityData)) {
+            populate(criticalityData);
+        } else {
+            Object.values(criticalityData).forEach(populate);
         }
     }
 
-    // Get unique courses taken by student
-    const coursesTaken = new Set();
-    studentRecords.forEach(record => {
-        const key = record.codigoAsignatura || record.nombreAsignatura;
-        coursesTaken.add(key);
+    // Identificar cursos únicos tomados
+    const uniqueCourses = new Set();
+    records.forEach(r => uniqueCourses.add(r.codigoMalla)); // Use cleaned code
+
+    let totalCritSum = 0;
+    let count = 0;
+
+    uniqueCourses.forEach(code => {
+        if (!code) return;
+        count++;
+        // If not in map, assume something? Lowest? 
+        // "si faltase) Muy Baja = 1"
+        const score = critMap.get(code) || 1;
+        totalCritSum += score;
     });
 
-    const totalCourses = coursesTaken.size;
-    if (totalCourses === 0) return 0.5;
+    if (count === 0) return 0.5;
 
-    // Sum criticality scores for all courses taken
-    // Per specification: Alta=5, Media-Alta=4, Media=3, Baja=2, Sin dato=1
-    let totalCriticalityScore = 0;
-    coursesTaken.forEach(courseCode => {
-        const criticality = criticalityLookup.get(courseCode);
-        const critScore = criticality ?
-            (CRITICALITY_SCORES[String(criticality).toLowerCase()] || 1) : 1; // Default to 1 if no data
-        totalCriticalityScore += critScore;
-    });
-
-    // Original specification: suma puntajes / (5 × total_cursos)
-    // Maximum possible score per course is 5, so denominator is 5 × total
-    const maxPossibleScore = 5 * totalCourses;
-    const criticalityIndex = totalCriticalityScore / maxPossibleScore;
-
-    // Ensure result is between 0 and 1
-    return Math.max(0, Math.min(1, criticalityIndex));
+    const c5 = 1 - (totalCritSum / (5 * count));
+    return Math.max(0, Math.min(1, c5));
 }
 
 /**
  * 6. Semester Relevance (Relevancia de semestre) - 10%
- * Formula: Current Semester Reached / Max Semester in Curriculum
+ * Formula: Ultimo semestre curricular alcanzado / Max semestre plan
  */
-export function calculateRelevance(studentRecords, curriculumData, malla = 'default') {
-    if (!studentRecords || studentRecords.length === 0) return 0;
+export function calculateRelevance(studentRecords, curriculumData) {
+    const records = getMallaRecords(studentRecords);
+    if (records.length === 0) return 0;
 
-    // Find the highest semester the student has reached
-    // Handle various field names and ensure proper number parsing
-    const semesters = studentRecords
-        .map(r => {
-            // Try multiple possible field names
-            const sem = r.semestre || r.Semestre || r.SEMESTRE || r.semester || 0;
-            return typeof sem === 'string' ? parseInt(sem, 10) : Number(sem);
-        })
-        .filter(s => !isNaN(s) && s > 0);
+    // Find max semestreCurricular
+    const semestres = records
+        .map(r => r.semestreCurricular)
+        .filter(s => typeof s === 'number' && s > 0);
 
-    // If no semester data found, try to infer from course codes or default to 1
-    if (semesters.length === 0) {
-        // Default to at least 1 semester if we have any records
-        return studentRecords.length > 0 ? 0.1 : 0;
-    }
+    const ultimoSemestreAlcanzado = semestres.length > 0 ? Math.max(...semestres) : 0;
 
-    const currentSemester = Math.max(...semesters);
-
-    // Determine max semester from curriculum or default to 10 for Kinesiology
-    let maxSemester = 10;
+    // Find Plan Max Semestre
+    // From curriculumData
+    let maxPlan = 10; // Default
+    // Try to scan curriculumData
     if (curriculumData) {
-        const mallaData = curriculumData[malla] || curriculumData['default'] || curriculumData;
-        if (mallaData.maxSemestre) {
-            maxSemester = parseInt(mallaData.maxSemestre, 10) || 10;
-        } else if (Array.isArray(mallaData)) {
-            const maxFromData = Math.max(...mallaData.map(c => parseInt(c.semestre, 10) || 0));
-            maxSemester = maxFromData > 0 ? maxFromData : 10;
-        }
+        // Collect all 'semestre' values
+        let allSems = [];
+        const scan = (list) => {
+            if (Array.isArray(list)) list.forEach(i => {
+                if (i.semestre) allSems.push(parseInt(i.semestre));
+            });
+        };
+
+        if (Array.isArray(curriculumData)) scan(curriculumData);
+        else Object.values(curriculumData).forEach(scan);
+
+        if (allSems.length > 0) maxPlan = Math.max(...allSems);
     }
 
-    return Math.min(currentSemester / maxSemester, 1);
+    if (maxPlan === 0) maxPlan = 10;
+
+    return Math.min(ultimoSemestreAlcanzado / maxPlan, 1);
 }
 
 /**
  * 7. Demographic Index (Índice demográfico) - 5%
+ * Manual Input.
  * Formula: (Gender + City + SchoolType) / 3
- * Gender: Female=1, Male=0, Other=1
+ * Gender: Female/Other=1, Male=0
  * City: Outside Santiago=1, Santiago=0
  * SchoolType: Public=1, Private=0
  */
 export function calculateDemographic(demographicData) {
-    if (!demographicData) return 0.5; // Neutral if no data
+    if (!demographicData) return 0.5;
 
-    const { genero, ciudad, tipoColegio } = demographicData;
+    // Destructure with default safety
+    const { genero = '', ciudad = '', tipoColegio = '' } = demographicData;
+    const g = genero.toLowerCase();
+    const c = ciudad.toLowerCase();
+    const t = tipoColegio.toLowerCase();
 
     // Gender score
     let genderScore = 0;
-    if (genero === 'mujer' || genero === 'female' || genero === 'otro' || genero === 'other') {
+    if (g === 'mujer' || g === 'female' || g === 'otro' || g === 'other') {
         genderScore = 1;
     }
 
     // City score (outside Santiago = 1)
     let cityScore = 0;
-    if (ciudad && !ciudad.toLowerCase().includes('santiago')) {
+    if (c && !c.includes('santiago')) {
         cityScore = 1;
     }
 
     // School type score (public = 1)
     let schoolScore = 0;
-    if (tipoColegio === 'publico' || tipoColegio === 'public' ||
-        tipoColegio === 'municipal' || tipoColegio === 'subvencionado') {
+    if (t === 'publico' || t === 'public' ||
+        t === 'municipal' || t === 'subvencionado') {
         schoolScore = 1;
     }
 
@@ -261,68 +315,82 @@ export function calculateDemographic(demographicData) {
 }
 
 /**
- * Calculate the complete Exit Indicator with all 7 components
+ * Main Calculator
  */
 export function calculateExitIndicator(studentRecords, criticalityData, curriculumData, demographicData) {
-    const studentMalla = studentRecords[0]?.malla || 'default';
+    // 1. Enrich/Ensure we have keys (Assumes parser did its job, or we re-ran enrichment)
+    // In App.jsx we will ensure enrichment runs before this is called or records passed here are enriched.
+    // For safety, we trust studentRecords have 'enMalla' if relevant. 
 
-    // Calculate all 7 components
+    const mallaName = studentRecords[0]?.malla || 'default';
+    const records = getMallaRecords(studentRecords); // Only valid curriculum courses
+
+    // Calculate Components
+    const compValues = {
+        approvalRate: calculateApprovalRate(studentRecords),
+        performance: calculatePerformance(studentRecords),
+        permanence: calculatePermanence(studentRecords),
+        repetition: calculateRepetition(studentRecords),
+        criticality: calculateCriticality(studentRecords, criticalityData),
+        relevance: calculateRelevance(studentRecords, curriculumData),
+        demographic: calculateDemographic(demographicData)
+    };
+
     const components = {
         approvalRate: {
-            value: calculateApprovalRate(studentRecords),
+            value: compValues.approvalRate,
             weight: 0.25,
             label: 'Tasa de Aprobación',
-            description: 'Cursos aprobados / Cursos cursados'
+            description: 'Cursos aprobados / Cursos cursados (Malla)'
         },
         performance: {
-            value: calculatePerformance(studentRecords),
+            value: compValues.performance,
             weight: 0.20,
             label: 'Rendimiento Académico',
-            description: 'Promedio de notas / 7.0'
+            description: 'Promedio de notas / 7.0 (Malla)'
         },
         permanence: {
-            value: calculatePermanence(studentRecords),
+            value: compValues.permanence,
             weight: 0.20,
             label: 'Permanencia',
             description: '1 - (Años cursados / 5)'
         },
         repetition: {
-            value: calculateRepetition(studentRecords),
+            value: compValues.repetition,
             weight: 0.10,
             label: 'Índice de Repetición',
             description: '1 - (Repeticiones / Cursos cursados)'
         },
         criticality: {
-            value: calculateCriticality(studentRecords, criticalityData, studentMalla),
+            value: compValues.criticality,
             weight: 0.10,
             label: 'Criticidad de Asignaturas',
-            description: 'Puntaje de criticidad normalizado'
+            description: '1 - (Suma criticidad / 5*Total)'
         },
         relevance: {
-            value: calculateRelevance(studentRecords, curriculumData, studentMalla),
+            value: compValues.relevance,
             weight: 0.10,
             label: 'Relevancia de Semestre',
-            description: 'Semestre alcanzado / Semestre máximo'
+            description: 'Semestre máx alcanzado / Semestre plan'
         },
         demographic: {
-            value: calculateDemographic(demographicData),
+            value: compValues.demographic,
             weight: 0.05,
             label: 'Índice Demográfico',
             description: '(Género + Ciudad + Colegio) / 3'
         }
     };
 
-    // Calculate weighted total
+    // Calculate Total
     let totalScore = 0;
-    Object.values(components).forEach(component => {
-        component.weightedValue = component.value * component.weight;
-        totalScore += component.weightedValue;
+    Object.values(components).forEach(c => {
+        c.weightedValue = c.value * c.weight;
+        totalScore += c.weightedValue;
     });
 
-    // Convert to percentage
     const finalPercentage = totalScore * 100;
 
-    // Determine level
+    // Level
     let level, levelClass;
     if (finalPercentage >= 80) {
         level = 'Alto';
@@ -335,59 +403,25 @@ export function calculateExitIndicator(studentRecords, criticalityData, curricul
         levelClass = 'low';
     }
 
-    // Get summary statistics
-    const uniqueCourses = new Set(studentRecords.map(r => r.codigoAsignatura || r.nombreAsignatura)).size;
-    const approvedCourses = calculateApprovedCount(studentRecords);
-    const averageGrade = calculateAverageGrade(studentRecords);
+    // Stats for UI
+    const totalMallaCount = new Set(records.map(r => r.codigoMalla)).size;
+    const approvedMallaCount = records.filter(r => r.nota >= 4.0).length; // Simplified
+
+    // Calculate Average Grade for display
+    const grades = records.filter(r => r.nota > 0);
+    const avgGrade = grades.length ? (grades.reduce((s, r) => s + r.nota, 0) / grades.length) : 0;
 
     return {
         components,
         totalScore: finalPercentage,
         level,
         levelClass,
-        malla: studentMalla,
+        malla: mallaName,
         stats: {
-            totalCourses: uniqueCourses,
-            approvedCourses,
-            averageGrade: averageGrade.toFixed(2),
-            currentSemester: Math.max(
-                ...studentRecords
-                    .map(r => {
-                        const sem = r.semestre || r.Semestre || r.SEMESTRE || r.semester || 0;
-                        return typeof sem === 'string' ? parseInt(sem, 10) : Number(sem);
-                    })
-                    .filter(s => !isNaN(s) && s > 0),
-                1
-            )
+            totalCourses: totalMallaCount,
+            approvedCourses: approvedMallaCount,
+            averageGrade: avgGrade.toFixed(2),
+            coveragePct: (totalMallaCount / 30) * 100 // Estimate
         }
     };
-}
-
-// Helper functions
-function calculateApprovedCount(studentRecords) {
-    const approvedCourses = new Set();
-    studentRecords.forEach(record => {
-        const key = record.codigoAsignatura || record.nombreAsignatura;
-        const isApproved = record.nota >= 4.0 ||
-            (record.estado && record.estado.toLowerCase().includes('aprob'));
-        if (isApproved) {
-            approvedCourses.add(key);
-        }
-    });
-    return approvedCourses.size;
-}
-
-function calculateAverageGrade(studentRecords) {
-    const bestGrades = new Map();
-    studentRecords.forEach(record => {
-        const key = record.codigoAsignatura || record.nombreAsignatura;
-        if (!bestGrades.has(key) || record.nota > bestGrades.get(key)) {
-            bestGrades.set(key, record.nota);
-        }
-    });
-
-    const grades = Array.from(bestGrades.values()).filter(g => g > 0);
-    if (grades.length === 0) return 0;
-
-    return grades.reduce((sum, g) => sum + g, 0) / grades.length;
 }

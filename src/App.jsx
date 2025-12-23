@@ -3,6 +3,7 @@ import { GraduationCap, Database, BarChart3, Sun, Moon } from 'lucide-react';
 import FileUpload from './components/FileUpload';
 import StudentSearch from './components/StudentSearch';
 import Dashboard from './components/Dashboard';
+import { enrichGradesWithTraza } from './utils/parsers';
 import uvmLogo from './assets/uvm-logo.png';
 import './App.css';
 
@@ -20,6 +21,28 @@ function App() {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
+
+  // Effect to enrich grades when curriculum or grades load
+  useEffect(() => {
+    if (gradesData.length > 0 && curriculumData) {
+      // Avoid infinite loop if data is already enriched and identical
+      // Simple check: check if first record has 'enMalla' property
+      const needsEnrichment = !gradesData[0].hasOwnProperty('enMalla');
+
+      // Or better: Re-run always if curriculum changes? 
+      // To be safe, we just update. But setGradesData triggers re-render.
+      // We should use a derived state or separate ref?
+      // For simplicity/robustness given the constraints:
+      // We will update it only if we detect a change in curriculum or new raw data.
+
+      const enriched = enrichGradesWithTraza(gradesData, curriculumData);
+
+      // Only set if different to avoid loop
+      if (JSON.stringify(enriched) !== JSON.stringify(gradesData)) {
+        setGradesData(enriched);
+      }
+    }
+  }, [gradesData, curriculumData]);
 
   const toggleTheme = () => {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
