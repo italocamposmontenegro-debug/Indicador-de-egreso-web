@@ -47,41 +47,57 @@ export function buildMallaIndex(mallaJson) {
     const allCourses = [];
 
     // Helper to add course to index
-    const addCourse = (course) => {
-        if (!course) return;
+    const addCourse = (obj) => {
+        if (!obj || typeof obj !== 'object') return;
 
-        // Extract fields trying common variations (case-insensitive search)
-        let codigo = '';
-        let nombre = '';
+        // Try all common key variations for name and code
+        const nameKeys = ['ASIGNATURA', 'NOMBRE', 'NAME', 'MATERIA', 'DESC', 'DESCRIPCION', 'ASIG'];
+        const codeKeys = ['CODIGO', 'SIGLA', 'COD', 'NRC', 'ID', 'CLAVE'];
+        const semKeys = ['SEMESTRE', 'NIVEL', 'INDICE_SEMESTRE', 'CICLO', 'PERIODO_MALLA'];
+
+        let name = '';
+        let code = '';
         let semestre = 0;
 
-        Object.keys(course).forEach(key => {
-            const lowerKey = key.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-            if (lowerKey.includes('codigo') || lowerKey.includes('sigla') || lowerKey === 'cod') {
-                codigo = course[key];
-            } else if (lowerKey.includes('asignatura') || lowerKey.includes('nombre') || lowerKey === 'name') {
-                nombre = course[key];
-            } else if (lowerKey.includes('semestre') || lowerKey.includes('nivel') || lowerKey.includes('periodo')) {
-                semestre = parseInt(course[key], 10) || semestre;
+        // Find first matching key (case insensitive)
+        const objKeys = Object.keys(obj);
+        for (const k of objKeys) {
+            const normK = k.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z]/g, '');
+            if (!name && nameKeys.some(nk => normK.includes(nk))) name = obj[k];
+            if (!code && codeKeys.some(ck => normK.includes(ck))) code = obj[k];
+            if (!semestre && semKeys.some(sk => normK.includes(sk))) semestre = parseInt(obj[k], 10);
+        }
+
+        // Fallback to lowercase check if still empty
+        if (!name) name = obj.asignatura || obj.nombre || obj.name;
+        if (!code) code = obj.codigo || obj.sigla || obj.cod;
+        if (!semestre) semestre = parseInt(obj.semestre || obj.nivel, 10) || 0;
+
+        if (name || code) {
+            const courseInfo = {
+                nombre: String(name || ''),
+                codigo: String(code || ''),
+                semestre: semestre || 0,
+                original: obj
+            };
+
+            const normName = normalizeCourseName(courseInfo.nombre);
+            const normCode = normalizeCourseName(courseInfo.codigo, true);
+
+            if (normCode) byCode.set(normCode, courseInfo);
+            if (normName) byName.set(normName, courseInfo);
+
+            // Avoid duplicates in allCourses
+            const isDuplicate = allCourses.some(c => {
+                const cNormName = normalizeCourseName(c.nombre);
+                const cNormCode = normalizeCourseName(c.codigo, true);
+                return (normCode && cNormCode === normCode) || (normName && cNormName === normName);
+            });
+
+            if (!isDuplicate) {
+                allCourses.push(courseInfo);
             }
-        });
-
-        if (!codigo && !nombre) return;
-
-        const entry = {
-            codigo,
-            nombre,
-            semestre,
-            original: course
-        };
-
-        if (codigo) {
-            byCode.set(normalizeCourseName(codigo, true), entry);
         }
-        if (nombre) {
-            byName.set(normalizeCourseName(nombre), entry);
-        }
-        allCourses.push(entry);
     };
 
     const isCourse = (obj) => {
@@ -96,18 +112,23 @@ export function buildMallaIndex(mallaJson) {
     };
 
     // Recursive function to find all courses
-    const traverse = (data) => {
-        if (!data) return;
+    const traverse = (data, depth = 0) => {
+        if (!data || depth > 10) return; // Safety limit
 
         if (Array.isArray(data)) {
-            data.forEach(traverse);
+            data.forEach(item => traverse(item, depth + 1));
         } else if (typeof data === 'object') {
             if (isCourse(data)) {
                 addCourse(data);
-            } else {
-                // Not a course, look deeper into its properties
-                Object.values(data).forEach(traverse);
             }
+
+            // ALWAYS look deeper, even if we thought this was a course
+            // (in case it's a container like "Semester" that has a name but also contains courses)
+            Object.values(data).forEach(val => {
+                if (val && typeof val === 'object') {
+                    traverse(val, depth + 1);
+                }
+            });
         }
     };
 
