@@ -258,14 +258,20 @@ export function calculateRelevance(studentRecords, curriculumData) {
     if (curriculumData) {
         // Collect all 'semestre' values
         let allSems = [];
-        const scan = (list) => {
-            if (Array.isArray(list)) list.forEach(i => {
-                if (i.semestre) allSems.push(parseInt(i.semestre));
-            });
+        const scan = (val) => {
+            if (Array.isArray(val)) {
+                val.forEach(i => {
+                    if (i && typeof i === 'object') {
+                        const s = i.semestre || i.nivel || i.indice_semestre;
+                        if (s) allSems.push(parseInt(s, 10));
+                    }
+                });
+            } else if (val && typeof val === 'object') {
+                Object.values(val).forEach(scan);
+            }
         };
 
-        if (Array.isArray(curriculumData)) scan(curriculumData);
-        else Object.values(curriculumData).forEach(scan);
+        scan(curriculumData);
 
         if (allSems.length > 0) maxPlan = Math.max(...allSems);
     }

@@ -1,4 +1,4 @@
-import { Award, BookOpen, GraduationCap, TrendingUp, BarChart3, Clock, Users } from 'lucide-react';
+import { Award, BookOpen, GraduationCap, TrendingUp, BarChart3, Clock, Users, AlertCircle } from 'lucide-react';
 import ScoreCard from './ScoreCard';
 import RecommendationPanel from './RecommendationPanel';
 import RadarChart from './RadarChart';
@@ -31,21 +31,60 @@ export default function Dashboard({ studentRecords, criticalityData, curriculumD
     // FIX: Enriquecer registros antes del cálculo
     const enrichedGrades = enrichGradesWithTraza(studentRecords, curriculumData);
 
-    // Validación temporal extendida
-    console.log("--- DEBUG IE CALCULATION ---");
-    console.log("Curriculum Data disponible:", !!curriculumData);
-    if (curriculumData) {
-        console.log("Muestra Curriculum (1er item):", Array.isArray(curriculumData) ? curriculumData[0] : 'Object keys: ' + Object.keys(curriculumData).join(', '));
-    }
-    console.log("Total registros estudiante:", studentRecords.length);
-    console.log("Muestra Registro (1er item):", studentRecords[0]);
     const inMalla = enrichedGrades.filter(r => r.enMalla);
-    console.log("Registros en malla encontrados:", inMalla.length);
-    if (inMalla.length > 0) {
-        console.log("Muestra Registro en Malla:", inMalla[0]);
-    }
-    console.log("Semestre curricular max:", Math.max(...enrichedGrades.filter(r => r.enMalla).map(r => r.semestreCurricular || 0), 0));
+    const totalFilasNotas = studentRecords.length;
+    const totalAsignaturasUnicasNotas = new Set(studentRecords.map(r => r.codigoAsignatura || r.nombreAsignatura)).size;
+    const totalRamosMalla = curriculumData ? (Array.isArray(curriculumData) ? curriculumData.length : Object.keys(curriculumData).length) : 0;
+    const uniqueMatchedCourses = new Set(inMalla.map(r => r.codigoMalla || r.nombreMalla)).size;
+
+    // Top 20 unmatched
+    const unmatched = enrichedGrades.filter(r => !r.enMalla);
+    const unmatchedCounts = {};
+    unmatched.forEach(r => {
+        const key = r.nombreAsignatura || r.codigoAsignatura;
+        unmatchedCounts[key] = (unmatchedCounts[key] || 0) + 1;
+    });
+    const topUnmatched = Object.entries(unmatchedCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 20);
+
+    // Validación temporal extendida (Console)
+    console.log("--- DEBUG IE CALCULATION ---");
+    console.log("Total filas notas:", totalFilasNotas);
+    console.log("Total asignaturas únicas notas:", totalAsignaturasUnicasNotas);
+    console.log("Total ramos malla (aprox):", totalRamosMalla);
+    console.log("Match count (filas):", inMalla.length);
+    console.log("Unique matched courses:", uniqueMatchedCourses);
+    console.log("Top unmatched:", topUnmatched);
     console.log("----------------------------");
+
+    if (inMalla.length === 0) {
+        return (
+            <div className="dashboard-error" style={{ padding: '2rem', textAlign: 'center' }}>
+                <AlertCircle size={64} color="var(--error-color)" />
+                <h2 style={{ marginTop: '1rem' }}>No se logró mapear ningún ramo a la malla</h2>
+                <p style={{ color: 'var(--text-muted)', maxWidth: '600px', margin: '1rem auto' }}>
+                    El sistema no pudo encontrar coincidencias entre las asignaturas del Excel de notas y la estructura curricular cargada.
+                </p>
+                <div style={{
+                    textAlign: 'left',
+                    background: 'var(--card-bg)',
+                    padding: '1.5rem',
+                    borderRadius: '8px',
+                    maxWidth: '600px',
+                    margin: '2rem auto',
+                    border: '1px solid var(--border-color)'
+                }}>
+                    <h4 style={{ marginBottom: '1rem' }}>Sugerencias:</h4>
+                    <ul style={{ paddingLeft: '1.5rem', lineHeight: '1.6' }}>
+                        <li>Verifica que el archivo de <strong>Malla Curricular</strong> sea el correcto.</li>
+                        <li>Asegúrate de no haber subido el JSON de criticidad en el espacio de la malla.</li>
+                        <li>Revisa que los nombres o códigos de las asignaturas en el Excel coincidan con los de la malla.</li>
+                    </ul>
+                </div>
+            </div>
+        );
+    }
 
     const indicatorResult = calculateExitIndicator(
         enrichedGrades,

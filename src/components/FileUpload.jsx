@@ -25,6 +25,19 @@ export default function FileUpload({ onDataLoaded, loadedFiles }) {
             try {
                 const data = await parseFile(file);
                 const fileType = detectFileType(file.name, data);
+
+                // Hard validation for curriculum
+                if (fileType === 'curriculum') {
+                    const isValid = validateCurriculumStructure(data);
+                    if (!isValid) {
+                        newErrors.push({
+                            file: file.name,
+                            error: 'El archivo de malla curricular no tiene estructura válida (falta semestres o plan). Revisa que no estés subiendo el JSON de criticidad en el slot de malla.'
+                        });
+                        continue;
+                    }
+                }
+
                 onDataLoaded(fileType, data, file.name);
             } catch (error) {
                 newErrors.push({ file: file.name, error: error.message });
@@ -34,6 +47,24 @@ export default function FileUpload({ onDataLoaded, loadedFiles }) {
         if (newErrors.length > 0) {
             setErrors(newErrors);
         }
+    };
+
+    const validateCurriculumStructure = (data) => {
+        if (!data || typeof data !== 'object') return false;
+
+        // Check for common curriculum structures
+        const keys = Object.keys(data).map(k => k.toLowerCase());
+        const hasSemestres = keys.some(k => k.includes('semestre') || k.includes('plan') || k.includes('nivel'));
+
+        if (Array.isArray(data)) {
+            // If array, check if first item looks like a course or a semester container
+            const first = data[0];
+            if (!first) return false;
+            const firstKeys = Object.keys(first).map(k => k.toLowerCase());
+            return firstKeys.some(k => k.includes('codigo') || k.includes('asignatura') || k.includes('nombre') || k.includes('semestre'));
+        }
+
+        return hasSemestres || keys.length > 0;
     };
 
     const detectFileType = (filename, data) => {
