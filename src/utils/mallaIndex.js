@@ -47,7 +47,7 @@ export function buildMallaIndex(mallaJson) {
     const allCourses = [];
 
     // Helper to add course to index
-    const addCourse = (obj) => {
+    const addCourse = (obj, inheritedSem = 0) => {
         if (!obj || typeof obj !== 'object') return;
 
         // Try all common key variations for name and code
@@ -57,7 +57,7 @@ export function buildMallaIndex(mallaJson) {
 
         let name = '';
         let code = '';
-        let semestre = 0;
+        let semestre = inheritedSem;
 
         // Find first matching key (case insensitive)
         const objKeys = Object.keys(obj);
@@ -65,13 +65,16 @@ export function buildMallaIndex(mallaJson) {
             const normK = k.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z]/g, '');
             if (!name && nameKeys.some(nk => normK.includes(nk))) name = obj[k];
             if (!code && codeKeys.some(ck => normK.includes(ck))) code = obj[k];
-            if (!semestre && semKeys.some(sk => normK.includes(sk))) semestre = parseInt(obj[k], 10);
+            if (semKeys.some(sk => normK.includes(sk))) {
+                const val = parseInt(obj[k], 10);
+                if (!isNaN(val) && val > 0) semestre = val;
+            }
         }
 
         // Fallback to lowercase check if still empty
         if (!name) name = obj.asignatura || obj.nombre || obj.name;
         if (!code) code = obj.codigo || obj.sigla || obj.cod;
-        if (!semestre) semestre = parseInt(obj.semestre || obj.nivel, 10) || 0;
+        if (semestre === 0) semestre = parseInt(obj.semestre || obj.nivel, 10) || 0;
 
         if (name || code) {
             const courseInfo = {
@@ -111,24 +114,53 @@ export function buildMallaIndex(mallaJson) {
         );
     };
 
-    // Recursive function to find all courses
-    const traverse = (data, depth = 0) => {
-        if (!data || depth > 10) return; // Safety limit
+    // Recursive function to find all courses with context inheritance
+    const traverse = (data, depth = 0, currentSem = 0) => {
+        if (!data || depth > 15) return; // Safety limit
 
         if (Array.isArray(data)) {
-            data.forEach(item => traverse(item, depth + 1));
+            data.forEach(item => traverse(item, depth + 1, currentSem));
         } else if (typeof data === 'object') {
-            if (isCourse(data)) {
-                addCourse(data);
+            // Check if this object's keys or the object itself indicates a semester
+            let detectedSem = currentSem;
+
+            // If the object has a clear semester/nivel key, use it
+            const keys = Object.keys(data);
+            for (const k of keys) {
+                const normK = k.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, '');
+
+                // Check for keys like "SEMESTRE1", "NIVEL2", or just "1", "2" if they are keys of a container
+                if (normK.includes('SEMESTRE') || normK.includes('NIVEL') || normK.includes('BLOQUE')) {
+                    const num = parseInt(k.replace(/\D/g, ''), 10);
+                    if (!isNaN(num) && num > 0) detectedSem = num;
+                }
             }
 
-            // ALWAYS look deeper, even if we thought this was a course
-            // (in case it's a container like "Semester" that has a name but also contains courses)
-            Object.values(data).forEach(val => {
+            if (isCourse(data)) {
+                // Pass the inherited or detected semester to addCourse
+                addCourse(data, detectedSem);
+            }
+
+            // Recurse into properties
+            for (const [key, val] of Object.entries(data)) {
                 if (val && typeof val === 'object') {
-                    traverse(val, depth + 1);
+                    // If the KEY itself is a number (e.g. "1": [...]), it might be a semester index
+                    let nextSem = detectedSem;
+                    const keyNum = parseInt(key, 10);
+                    if (!isNaN(keyNum) && keyNum > 0 && keyNum <= 12) {
+                        nextSem = keyNum;
+                    } else {
+                        // Check if key contains "Semestre X"
+                        const keyNorm = key.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                        if (keyNorm.includes('SEMESTRE') || keyNorm.includes('NIVEL')) {
+                            const num = parseInt(key.replace(/\D/g, ''), 10);
+                            if (!isNaN(num) && num > 0) nextSem = num;
+                        }
+                    }
+
+                    traverse(val, depth + 1, nextSem);
                 }
-            });
+            }
         }
     };
 

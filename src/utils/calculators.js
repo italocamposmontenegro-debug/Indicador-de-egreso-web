@@ -263,14 +263,27 @@ export function calculateRelevance(studentRecords, curriculumData) {
         let allSems = [];
         const scan = (val) => {
             if (Array.isArray(val)) {
-                val.forEach(i => {
-                    if (i && typeof i === 'object') {
-                        const s = i.semestre || i.nivel || i.indice_semestre;
-                        if (s) allSems.push(parseInt(s, 10));
-                    }
-                });
+                val.forEach(i => scan(i));
             } else if (val && typeof val === 'object') {
-                Object.values(val).forEach(scan);
+                // Check if this object's keys or the object itself indicates a semester
+                const keys = Object.keys(val);
+                for (const k of keys) {
+                    const normK = k.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z]/g, '');
+                    if (normK.includes('SEMESTRE') || normK.includes('NIVEL') || normK.includes('BLOQUE')) {
+                        const s = parseInt(String(val[k]).replace(/\D/g, ''), 10);
+                        if (!isNaN(s)) allSems.push(s);
+                    }
+                }
+
+                // Also check keys of the object if it's a container
+                for (const [k, v] of Object.entries(val)) {
+                    const normK = k.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z]/g, '');
+                    if (normK.includes('SEMESTRE') || normK.includes('NIVEL')) {
+                        const s = parseInt(k.replace(/\D/g, ''), 10);
+                        if (!isNaN(s)) allSems.push(s);
+                    }
+                    if (v && typeof v === 'object') scan(v);
+                }
             }
         };
 
@@ -281,7 +294,15 @@ export function calculateRelevance(studentRecords, curriculumData) {
 
     if (maxPlan === 0) maxPlan = 10;
 
-    return Math.min(ultimoSemestreAlcanzado / maxPlan, 1);
+    const relevance = Math.min(ultimoSemestreAlcanzado / maxPlan, 1);
+
+    console.log(`--- DEBUG RELEVANCE ---`);
+    console.log(`Ultimo Semestre Alcanzado: ${ultimoSemestreAlcanzado}`);
+    console.log(`Max Semestre Plan: ${maxPlan}`);
+    console.log(`Resultado C6: ${relevance}`);
+    console.log(`-----------------------`);
+
+    return relevance;
 }
 
 /**
