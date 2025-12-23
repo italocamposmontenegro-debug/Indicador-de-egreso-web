@@ -85,39 +85,33 @@ export function buildMallaIndex(mallaJson) {
     };
 
     const isCourse = (obj) => {
-        if (!obj || typeof obj !== 'object') return false;
+        if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return false;
         const keys = Object.keys(obj).map(k => normalizeCourseName(k, true));
-        return keys.some(k => k.includes('CODIGO') || k.includes('SIGLA') || k === 'COD' || k.includes('ASIGNATURA') || k.includes('NOMBRE') || k === 'NAME');
+        // Check for common course identifiers
+        return keys.some(k =>
+            k.includes('CODIGO') || k.includes('SIGLA') || k === 'COD' || k === 'NRC' ||
+            k.includes('ASIGNATURA') || k.includes('NOMBRE') || k === 'NAME' || k === 'MATERIA' ||
+            k.includes('DESC')
+        );
     };
 
-    // Traverse the JSON structure
-    if (Array.isArray(mallaJson)) {
-        mallaJson.forEach(item => {
-            if (isCourse(item)) {
-                addCourse(item);
-            } else if (item && typeof item === 'object') {
-                // Try to find nested arrays (e.g., semesters)
-                Object.values(item).forEach(val => {
-                    if (Array.isArray(val)) val.forEach(addCourse);
-                });
+    // Recursive function to find all courses
+    const traverse = (data) => {
+        if (!data) return;
+
+        if (Array.isArray(data)) {
+            data.forEach(traverse);
+        } else if (typeof data === 'object') {
+            if (isCourse(data)) {
+                addCourse(data);
+            } else {
+                // Not a course, look deeper into its properties
+                Object.values(data).forEach(traverse);
             }
-        });
-    } else if (typeof mallaJson === 'object' && mallaJson !== null) {
-        if (isCourse(mallaJson)) {
-            addCourse(mallaJson);
-        } else {
-            Object.values(mallaJson).forEach(val => {
-                if (Array.isArray(val)) {
-                    val.forEach(addCourse);
-                } else if (typeof val === 'object' && val !== null) {
-                    // One more level for nested structures like { "1": [courses] }
-                    Object.values(val).forEach(subVal => {
-                        if (Array.isArray(subVal)) subVal.forEach(addCourse);
-                    });
-                }
-            });
         }
-    }
+    };
+
+    traverse(mallaJson);
 
     return { byCode, byName, allCourses };
 }
@@ -147,23 +141,29 @@ export function matchAsignaturaToMalla(record, mallaIndex) {
 
     // 3. Match Tolerante (Fuzzy)
     // Only attempt if name is long enough to avoid false positives with short abbreviations
-    if (recordName && recordName.length > 5) {
+    if (recordName && recordName.length > 3) {
 
         // Check strict includes in both directions
         for (const [normName, info] of mallaIndex.byName.entries()) {
 
             // If one contains the other (and length difference isn't massive)
+            // e.g., "ANATOMIA DEL APARATO LOCOMOTOR" vs "ANATOMIA"
             if (normName.includes(recordName) || recordName.includes(normName)) {
 
-                // Specific safeguard: "Taller I" vs "Taller II" collision
-                // We check if the remaining part is just numbers (I, II, 1, 2)
+                // Specific safeguard: "INGLES 1" vs "INGLES 2"
+                // If both have numbers, they must match exactly
+                const recordNum = recordName.match(/\d+/);
+                const mallaNum = normName.match(/\d+/);
+                if (recordNum && mallaNum && recordNum[0] !== mallaNum[0]) {
+                    continue;
+                }
 
                 return info;
             }
 
             // Check startsWith for truncations (e.g., "Anatomia Gen" vs "Anatomia General")
             if (normName.startsWith(recordName) || recordName.startsWith(normName)) {
-                if (Math.abs(normName.length - recordName.length) < 15) { // Arbitrary safety limit
+                if (Math.abs(normName.length - recordName.length) < 20) { // Arbitrary safety limit
                     return info;
                 }
             }

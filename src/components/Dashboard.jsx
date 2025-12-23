@@ -6,6 +6,7 @@ import ExportPanel from './ExportPanel';
 import { calculateExitIndicator } from '../utils/calculators';
 import { generateRecommendations, getSummaryText } from '../utils/recommendations';
 import { enrichGradesWithTraza } from '../utils/parsers';
+import { buildMallaIndex } from '../utils/mallaIndex';
 
 const componentIcons = {
     approvalRate: BookOpen,
@@ -56,6 +57,14 @@ export default function Dashboard({ studentRecords, criticalityData, curriculumD
     console.log("Match count (filas):", inMalla.length);
     console.log("Unique matched courses:", uniqueMatchedCourses);
     console.log("Top unmatched:", topUnmatched);
+
+    // Deep Debug: Ver qué hay en el index
+    const mallaIndex = enrichGradesWithTraza.mallaIndex; // We'll need to expose this or rebuild it
+    if (curriculumData) {
+        const tempIndex = buildMallaIndex(curriculumData);
+        console.log("Muestra Index (primeros 5 nombres):", Array.from(tempIndex.byName.keys()).slice(0, 5));
+        console.log("Muestra Index (primeros 5 códigos):", Array.from(tempIndex.byCode.keys()).slice(0, 5));
+    }
     console.log("----------------------------");
 
     if (inMalla.length === 0) {
