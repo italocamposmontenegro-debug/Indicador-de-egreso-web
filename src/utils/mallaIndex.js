@@ -74,31 +74,39 @@ export function buildMallaIndex(mallaJson) {
         allCourses.push(entry);
     };
 
+    const isCourse = (obj) => {
+        if (!obj || typeof obj !== 'object') return false;
+        const keys = Object.keys(obj).map(k => k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+        return keys.some(k => k.includes('codigo') || k.includes('sigla') || k === 'cod' || k.includes('asignatura') || k.includes('nombre') || k === 'name');
+    };
+
     // Traverse the JSON structure
     if (Array.isArray(mallaJson)) {
         mallaJson.forEach(item => {
-            // Check if item is a course directly or a container (like "2020": [...])
-            if (item.codigo || item.nombre) {
+            if (isCourse(item)) {
                 addCourse(item);
-            } else {
-                // Try to see if it's a semester array or similar
+            } else if (item && typeof item === 'object') {
+                // Try to find nested arrays (e.g., semesters)
                 Object.values(item).forEach(val => {
                     if (Array.isArray(val)) val.forEach(addCourse);
                 });
             }
         });
-    } else if (typeof mallaJson === 'object') {
-        // Handle object with keys like "2020", "Plan 2015", etc.
-        Object.values(mallaJson).forEach(val => {
-            if (Array.isArray(val)) {
-                val.forEach(addCourse);
-            } else if (typeof val === 'object') {
-                // Maybe semester keys "1": [...]
-                Object.values(val).forEach(subVal => {
-                    if (Array.isArray(subVal)) subVal.forEach(addCourse);
-                });
-            }
-        });
+    } else if (typeof mallaJson === 'object' && mallaJson !== null) {
+        if (isCourse(mallaJson)) {
+            addCourse(mallaJson);
+        } else {
+            Object.values(mallaJson).forEach(val => {
+                if (Array.isArray(val)) {
+                    val.forEach(addCourse);
+                } else if (typeof val === 'object' && val !== null) {
+                    // One more level for nested structures like { "1": [courses] }
+                    Object.values(val).forEach(subVal => {
+                        if (Array.isArray(subVal)) subVal.forEach(addCourse);
+                    });
+                }
+            });
+        }
     }
 
     return { byCode, byName, allCourses };

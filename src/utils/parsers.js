@@ -20,12 +20,12 @@ export function parseGradesExcel(file) {
                 const normalizedData = jsonData.map(row => {
                     const normalized = {};
                     Object.keys(row).forEach(key => {
-                        const lowerKey = key.toLowerCase().trim();
+                        const lowerKey = key.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
                         if (lowerKey.includes('rut')) normalized.rut = String(row[key]).replace(/\./g, '').split('-')[0];
                         else if (lowerKey.includes('codigo') || lowerKey.includes('sigla')) normalized.codigoAsignatura = row[key];
                         else if (lowerKey.includes('asignatura') || lowerKey.includes('nombre')) normalized.nombreAsignatura = row[key];
                         else if (lowerKey.includes('nota') || lowerKey.includes('calificacion')) normalized.nota = parseFloat(row[key]) || 0;
-                        else if (lowerKey.includes('semestre')) normalized.semestre = parseInt(row[key]) || 1;
+                        else if (lowerKey.includes('semestre')) normalized.semestre = parseInt(row[key]) || 0;
                         else if (lowerKey.includes('año') || lowerKey.includes('anio') || lowerKey.includes('year')) normalized.anio = parseInt(row[key]) || 0;
                         else if (lowerKey.includes('oportunidad') || lowerKey.includes('intento')) normalized.oportunidad = parseInt(row[key]) || 1;
                         else if (lowerKey.includes('malla') || lowerKey.includes('plan')) normalized.malla = row[key];
@@ -86,7 +86,7 @@ export function parseGradesCSV(file) {
                     return;
                 }
 
-                const headers = lines[0].split(/[,;]/).map(h => h.trim().toLowerCase());
+                const headers = lines[0].split(/[,;]/).map(h => h.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
                 const data = [];
 
                 for (let i = 1; i < lines.length; i++) {
@@ -164,18 +164,20 @@ export function parseJSON(file) {
                     if (hasGradeFields) {
                         // Normalize the grade data
                         const normalizedData = data.map(row => {
-                            const obj = {
-                                rut: String(row.rut || row.RUT || '').replace(/\./g, '').split('-')[0],
-                                codigoAsignatura: row.codigoAsignatura || row.codigo || row.sigla || row.Codigo || '',
-                                nombreAsignatura: row.nombreAsignatura || row.nombre || row.Nombre || row.asignatura || '',
-                                nota: parseFloat(row.nota || row.Nota || row.calificacion || 0) || 0,
-                                semestre: parseInt(row.semestre || row.Semestre || row.semester || 0, 10) || 0,
-                                anio: parseInt(row.anio || row.año || row.Anio || row.year || 0, 10) || 0,
-                                oportunidad: parseInt(row.oportunidad || row.intento || row.Oportunidad || 1, 10) || 1,
-                                malla: row.malla || row.plan || row.Malla || 'default',
-                                estado: row.estado || row.Estado || '',
-                                periodo: row.periodo || row.Periodo || row.PERIODO
-                            };
+                            const obj = {};
+                            Object.keys(row).forEach(key => {
+                                const lowerKey = key.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                                if (lowerKey.includes('rut')) obj.rut = String(row[key]).replace(/\./g, '').split('-')[0];
+                                else if (lowerKey.includes('codigo') || lowerKey.includes('sigla')) obj.codigoAsignatura = row[key];
+                                else if (lowerKey.includes('asignatura') || lowerKey.includes('nombre')) obj.nombreAsignatura = row[key];
+                                else if (lowerKey.includes('nota') || lowerKey.includes('calificacion')) obj.nota = parseFloat(row[key]) || 0;
+                                else if (lowerKey.includes('semestre')) obj.semestre = parseInt(row[key]) || 0;
+                                else if (lowerKey.includes('año') || lowerKey.includes('anio') || lowerKey.includes('year')) obj.anio = parseInt(row[key]) || 0;
+                                else if (lowerKey.includes('oportunidad') || lowerKey.includes('intento')) obj.oportunidad = parseInt(row[key]) || 1;
+                                else if (lowerKey.includes('malla') || lowerKey.includes('plan')) obj.malla = row[key];
+                                else if (lowerKey.includes('estado') || lowerKey.includes('aprobado')) obj.estado = row[key];
+                                else if (lowerKey.includes('periodo')) obj.periodo = row[key] || row.PERIODO;
+                            });
 
                             // Derivar anio y semestre desde PERIODO si no vienen explícitos
                             if (obj.periodo) {
@@ -269,6 +271,7 @@ export function enrichGradesWithTraza(gradesData, curriculumData) {
     if (!curriculumData || !gradesData) return gradesData;
 
     const mallaIndex = buildMallaIndex(curriculumData);
+    console.log(`Enrichment: Malla Index built with ${mallaIndex.allCourses.length} courses`);
 
     return gradesData.map(record => {
         const match = matchAsignaturaToMalla(record, mallaIndex);
