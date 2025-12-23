@@ -3,11 +3,26 @@ import { buildMallaIndex, matchAsignaturaToMalla, normalizeCourseName } from './
 
 /**
  * Parse an Excel file (.xlsx) containing student grades
- * Expected columns: RUT, Codigo Asignatura (o CODIGO_ASIGNATURA), Nombre Asignatura, Nota, Semestre, Anio, Oportunidad, Malla, Estado, Periodo
+ * Expected columns (flexibles):
+ * - RUT
+ * - Codigo Asignatura / Sigla Asignatura / CODIGO_ASIGNATURA
+ * - Nombre Asignatura
+ * - Nota
+ * - Semestre
+ * - Anio
+ * - Oportunidad
+ * - Malla
+ * - Estado
+ * - Periodo
+ *
+ * IMPORTANT:
+ * - Si existe una columna "Código" (genérica), NO debe pisar codigoAsignatura.
+ * - Priorizamos CODIGO_ASIGNATURA / SIGLA_ASIGNATURA / "Codigo Asignatura" por sobre "Código".
  */
 export function parseGradesExcel(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
+
     reader.onload = (e) => {
       try {
         const data = new Uint8Array(e.target.result);
@@ -16,89 +31,125 @@ export function parseGradesExcel(file) {
         const worksheet = workbook.Sheets[sheetName];
         const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
 
-        // Normalize column names (handle Spanish variations)
-        const normalizedData = jsonData.map(row => {
+        const normalizedData = jsonData.map((row) => {
           const normalized = {};
 
-          Object.keys(row).forEach(key => {
-            const normKey = normalizeCourseName(key, true);
-
-            // RUT
-            if (normKey.includes('RUT')) {
-              normalized.rut = String(row[key]).replace(/\./g, '').split('-')[0];
-              return;
-            }
-
-            // CODIGO / SIGLA (incluye CODIGO_ASIGNATURA)
-            if (normKey.includes('CODIGO') || normKey.includes('SIGLA')) {
-              const val = row[key];
-              // no pisar si viene vacío y ya hay un código previo
-              if (val !== '' && val !== null && val !== undefined) {
-                normalized.codigoAsignatura = val;
-              }
-              return;
-            }
-
-            // NOMBRE / ASIGNATURA
-            if (normKey.includes('ASIGNATURA') || normKey.includes('NOMBRE')) {
-              normalized.nombreAsignatura = row[key];
-              return;
-            }
-
-            // NOTA
-            if (normKey.includes('NOTA') || normKey.includes('CALIFICACION')) {
-              normalized.nota = parseFloat(row[key]) || 0;
-              return;
-            }
-
-            // SEMESTRE
-            if (normKey.includes('SEMESTRE')) {
-              normalized.semestre = parseInt(row[key]) || 0;
-              return;
-            }
-
-            // AÑO
-            if (normKey.includes('ANIO') || normKey.includes('AÑO') || normKey.includes('YEAR')) {
-              normalized.anio = parseInt(row[key]) || 0;
-              return;
-            }
-
-            // OPORTUNIDAD / INTENTO
-            if (normKey.includes('OPORTUNIDAD') || normKey.includes('INTENTO')) {
-              normalized.oportunidad = parseInt(row[key]) || 1;
-              return;
-            }
-
-            // MALLA / PLAN
-            if (normKey.includes('MALLA') || normKey.includes('PLAN')) {
-              normalized.malla = row[key];
-              return;
-            }
-
-            // ESTADO / APROBADO
-            if (normKey.includes('ESTADO') || normKey.includes('APROBADO')) {
-              normalized.estado = row[key];
-              return;
-            }
-
-            // PERIODO
-            if (normKey.includes('PERIODO')) {
-              normalized.periodo = row[key];
-              return;
-            }
+          // 1) Pre-normalizamos headers para decidir prioridades sin depender del orden de columnas
+          const entries = Object.entries(row).map(([key, value]) => {
+            const normKey = normalizeCourseName(key, true); // sin espacios ni símbolos
+            return { key, normKey, value };
           });
 
-          // Derivar anio y semestre desde PERIODO si no vienen explícitos
+          // Helpers: buscar columnas por prioridad
+          const pickFirst = (predicates) => {
+            for (const pred of predicates) {
+              const hit = entries.find(({ normKey }) => pred(normKey));
+              if (hit) return hit.value;
+            }
+            return undefined;
+          };
+
+          // 2) RUT
+          const rutVal = pickFirst([
+            (k) => k.includes('RUT'),
+          ]);
+          if (rutVal !== undefined) {
+            normalized.rut = String(rutVal).replace(/\./g, '').split('-')[0];
+          }
+
+          // 3) CÓDIGO ASIGNATURA (PRIORITARIO)
+          //    Evitamos que "CODIGO" genérico (ej: "Código") pise esto.
+          const codigoAsignaturaVal = pickFirst([
+            (k) => k.includes('CODIGOASIGNATURA'),
+            (k) => k.includes('SIGLAASIGNATURA'),
+            (k) => (k.includes('CODIGO') && k.includes('ASIGNATURA')),
+            (k) => (k.includes('SIGLA') && k.includes('ASIGNATURA')),
+            // fallback: si solo existe "SIGLA" o "CODIGO" y no hay un genérico "CODIGO" sin contexto
+            (k) => k === 'SIGLA',
+            // OJO: NO incluimos k === 'CODIGO' aquí para no tomar "Código" genérico
+          ]);
+
+          if (codigoAsignaturaVal !== undefined && codigoAsignaturaVal !== null && codigoAsignaturaVal !== '') {
+            normalized.codigoAsignatura = codigoAsignaturaVal;
+          }
+
+          // 4) NOMBRE ASIGNATURA
+          const nombreAsignaturaVal = pickFirst([
+            (k) => k.includes('NOMBREASIGNATURA'),
+            (k) => k.includes('ASIGNATURA'),
+            (k) => k.includes('NOMBRE'),
+          ]);
+          if (nombreAsignaturaVal !== undefined) {
+            normalized.nombreAsignatura = nombreAsignaturaVal;
+          }
+
+          // 5) NOTA
+          const notaVal = pickFirst([
+            (k) => k === 'NOTA',
+            (k) => k.includes('CALIFICACION'),
+            (k) => k.includes('PROMEDIO') && !k.includes('PROMEDIOFINAL'),
+          ]);
+          normalized.nota = parseFloat(notaVal) || 0;
+
+          // 6) SEMESTRE
+          const semestreVal = pickFirst([
+            (k) => k === 'SEMESTRE',
+            (k) => k.includes('SEMESTRE'),
+          ]);
+          normalized.semestre = parseInt(semestreVal) || 0;
+
+          // 7) AÑO
+          const anioVal = pickFirst([
+            (k) => k === 'ANIO',
+            (k) => k === 'AÑO',
+            (k) => k.includes('ANIO'),
+            (k) => k.includes('YEAR'),
+          ]);
+          normalized.anio = parseInt(anioVal) || 0;
+
+          // 8) OPORTUNIDAD / INTENTO
+          const oportunidadVal = pickFirst([
+            (k) => k.includes('OPORTUNIDAD'),
+            (k) => k.includes('INTENTO'),
+          ]);
+          normalized.oportunidad = parseInt(oportunidadVal) || 1;
+
+          // 9) MALLA / PLAN
+          const mallaVal = pickFirst([
+            (k) => k.includes('MALLA'),
+            (k) => k.includes('PLAN'),
+          ]);
+          normalized.malla = mallaVal || 'default';
+
+          // 10) ESTADO
+          const estadoVal = pickFirst([
+            (k) => k.includes('ESTADO'),
+            (k) => k.includes('APROBADO'),
+          ]);
+          if (estadoVal !== undefined) normalized.estado = estadoVal;
+
+          // 11) PERIODO
+          const periodoVal = pickFirst([
+            (k) => k.includes('PERIODO'),
+          ]);
+          if (periodoVal !== undefined) normalized.periodo = periodoVal;
+
+          // 12) Columna "Código" genérica (si existe), la guardamos como extra (NO pisa codigoAsignatura)
+          //     Esto sirve si después quieres usarlo para algo, pero no afecta match con malla.
+          const codigoGenerico = pickFirst([
+            (k) => k === 'CODIGO', // "Código"
+          ]);
+          if (codigoGenerico !== undefined) normalized.codigoGenerico = codigoGenerico;
+
+          // Derivar anio/semestre desde PERIODO si faltan
           if (normalized.periodo) {
             const pStr = String(normalized.periodo).replace(/\D/g, '');
 
-            // Año
             if (!normalized.anio || normalized.anio === 0) {
               const year = parseInt(pStr.slice(0, 4), 10);
               if (!isNaN(year)) normalized.anio = year;
             }
 
-            // Semestre académico
             if (!normalized.semestre || normalized.semestre === 0) {
               const semCode = pStr.slice(-2);
               if (semCode === '10') normalized.semestre = 1;
@@ -110,16 +161,15 @@ export function parseGradesExcel(file) {
           // Fallback seguro
           normalized.semestre = normalized.semestre || 1;
           normalized.anio = normalized.anio || 0;
-
-          // Default values
           normalized.oportunidad = normalized.oportunidad || 1;
           normalized.malla = normalized.malla || 'default';
 
-          // Normalizar código (opcional, sin alterar el valor original)
-          // normalized.codigoAsignatura = normalized.codigoAsignatura || '';
-
           return normalized;
         });
+
+        // Debug útil: % con codigoAsignatura
+        const withCode = normalizedData.filter(r => r.codigoAsignatura && String(r.codigoAsignatura).trim() !== '').length;
+        console.log(`[parseGradesExcel] Rows: ${normalizedData.length} | con codigoAsignatura: ${withCode} (${((withCode/Math.max(1,normalizedData.length))*100).toFixed(1)}%)`);
 
         resolve(normalizedData);
       } catch (error) {
@@ -157,29 +207,35 @@ export function parseGradesCSV(file) {
           headers.forEach((header, index) => {
             const value = values[index]?.trim() || '';
 
-            if (header.includes('rut')) row.rut = value.replace(/\./g, '').split('-')[0];
-            else if (header.includes('codigo') || header.includes('sigla')) row.codigoAsignatura = value;
-            else if (header.includes('asignatura') || header.includes('nombre')) row.nombreAsignatura = value;
-            else if (header.includes('nota')) row.nota = parseFloat(value) || 0;
-            else if (header.includes('semestre')) row.semestre = parseInt(value) || 1;
-            else if (header.includes('año') || header.includes('anio')) row.anio = parseInt(value) || 0;
-            else if (header.includes('oportunidad') || header.includes('intento')) row.oportunidad = parseInt(value) || 1;
-            else if (header.includes('malla') || header.includes('plan')) row.malla = value;
-            else if (header.includes('estado')) row.estado = value;
-            else if (header.includes('periodo')) row.periodo = value;
+            if (header.includes('RUT')) row.rut = value.replace(/\./g, '').split('-')[0];
+
+            // Priorizar CODIGOASIGNATURA / SIGLAASIGNATURA
+            else if (header.includes('CODIGOASIGNATURA') || header.includes('SIGLAASIGNATURA') || (header.includes('CODIGO') && header.includes('ASIGNATURA'))) {
+              row.codigoAsignatura = value;
+            }
+            // Evitar que CODIGO genérico pise
+            else if (header === 'CODIGO') {
+              row.codigoGenerico = value;
+            }
+
+            else if (header.includes('ASIGNATURA') || header.includes('NOMBRE')) row.nombreAsignatura = value;
+            else if (header.includes('NOTA') || header.includes('CALIFICACION')) row.nota = parseFloat(value) || 0;
+            else if (header.includes('SEMESTRE')) row.semestre = parseInt(value) || 1;
+            else if (header.includes('ANIO') || header.includes('AÑO') || header.includes('YEAR')) row.anio = parseInt(value) || 0;
+            else if (header.includes('OPORTUNIDAD') || header.includes('INTENTO')) row.oportunidad = parseInt(value) || 1;
+            else if (header.includes('MALLA') || header.includes('PLAN')) row.malla = value;
+            else if (header.includes('ESTADO')) row.estado = value;
+            else if (header.includes('PERIODO')) row.periodo = value;
           });
 
-          // Derivar anio y semestre desde PERIODO si no vienen explícitos
           if (row.periodo) {
             const pStr = String(row.periodo).replace(/\D/g, '');
 
-            // Año
             if (!row.anio || row.anio === 0) {
               const year = parseInt(pStr.slice(0, 4), 10);
               if (!isNaN(year)) row.anio = year;
             }
 
-            // Semestre académico
             if (!row.semestre || row.semestre === 0) {
               const semCode = pStr.slice(-2);
               if (semCode === '10') row.semestre = 1;
@@ -188,12 +244,11 @@ export function parseGradesCSV(file) {
             }
           }
 
-          // Fallback seguro
           row.semestre = row.semestre || 1;
           row.anio = row.anio || 0;
-
           row.oportunidad = row.oportunidad || 1;
           row.malla = row.malla || 'default';
+
           data.push(row);
         }
 
@@ -218,7 +273,7 @@ export function parseJSON(file) {
       try {
         const data = JSON.parse(e.target.result);
 
-        // Check if this looks like a grades file (array with rut/nota fields)
+        // Grade-like JSON array
         if (Array.isArray(data) && data.length > 0) {
           const sample = data[0];
           const hasGradeFields = sample.rut || sample.RUT || sample.nota || sample.Nota;
@@ -226,11 +281,19 @@ export function parseJSON(file) {
           if (hasGradeFields) {
             const normalizedData = data.map(row => {
               const obj = {};
+
               Object.keys(row).forEach(key => {
                 const normKey = normalizeCourseName(key, true);
 
                 if (normKey.includes('RUT')) obj.rut = String(row[key]).replace(/\./g, '').split('-')[0];
-                else if (normKey.includes('CODIGO') || normKey.includes('SIGLA')) obj.codigoAsignatura = row[key];
+
+                else if (normKey.includes('CODIGOASIGNATURA') || normKey.includes('SIGLAASIGNATURA') || (normKey.includes('CODIGO') && normKey.includes('ASIGNATURA'))) {
+                  obj.codigoAsignatura = row[key];
+                }
+                else if (normKey === 'CODIGO') {
+                  obj.codigoGenerico = row[key];
+                }
+
                 else if (normKey.includes('ASIGNATURA') || normKey.includes('NOMBRE')) obj.nombreAsignatura = row[key];
                 else if (normKey.includes('NOTA') || normKey.includes('CALIFICACION')) obj.nota = parseFloat(row[key]) || 0;
                 else if (normKey.includes('SEMESTRE')) obj.semestre = parseInt(row[key]) || 0;
@@ -241,17 +304,14 @@ export function parseJSON(file) {
                 else if (normKey.includes('PERIODO')) obj.periodo = row[key] || row.PERIODO;
               });
 
-              // Derivar anio y semestre desde PERIODO si no vienen explícitos
               if (obj.periodo) {
                 const pStr = String(obj.periodo).replace(/\D/g, '');
 
-                // Año
                 if (!obj.anio || obj.anio === 0) {
                   const year = parseInt(pStr.slice(0, 4), 10);
                   if (!isNaN(year)) obj.anio = year;
                 }
 
-                // Semestre académico
                 if (!obj.semestre || obj.semestre === 0) {
                   const semCode = pStr.slice(-2);
                   if (semCode === '10') obj.semestre = 1;
@@ -260,10 +320,8 @@ export function parseJSON(file) {
                 }
               }
 
-              // Fallback seguro
               obj.semestre = obj.semestre || 1;
               obj.anio = obj.anio || 0;
-
               obj.oportunidad = obj.oportunidad || 1;
               obj.malla = obj.malla || 'default';
 
@@ -280,7 +338,6 @@ export function parseJSON(file) {
         reject(new Error('Error parsing JSON file: ' + error.message));
       }
     };
-
     reader.onerror = () => reject(new Error('Error reading file'));
     reader.readAsText(file);
   });
@@ -333,8 +390,7 @@ export function getStudentRecords(gradesData, rut) {
 
 /**
  * Enrich grades data with curriculum info
- * Adds: enMalla (bool), semestreCurricular (number), codigoMalla, nombreMalla
- * PRIORIDAD: match por CODIGO_ASIGNATURA -> fallback por nombre
+ * Adds: enMalla (bool), semestreCurricular, codigoMalla, nombreMalla
  */
 export function enrichGradesWithTraza(gradesData, curriculumData) {
   if (!curriculumData || !gradesData) return gradesData;
@@ -342,50 +398,20 @@ export function enrichGradesWithTraza(gradesData, curriculumData) {
   const mallaIndex = buildMallaIndex(curriculumData);
   console.log(`Enrichment: Malla Index built with ${mallaIndex.allCourses.length} courses`);
 
-  // Normaliza códigos para que KINE1010 / "KINE 1010" / "kine-1010" matcheen igual
-  const normalizeCode = (value) => {
-    if (value === null || value === undefined) return '';
-    return String(value)
-      .trim()
-      .toUpperCase()
-      .replace(/\s+/g, '')
-      .replace(/[^A-Z0-9]/g, '');
-  };
-
-  // Índice rápido por código desde la malla
-  const byCode = new Map();
-  (mallaIndex.allCourses || []).forEach(c => {
-    const code = normalizeCode(c.codigo);
-    if (code) byCode.set(code, c);
-  });
-
-  return gradesData.map(record => {
-    const rawCode =
-      record.codigoAsignatura ||
-      record.CODIGO_ASIGNATURA ||
-      record.codigo ||
-      record.sigla ||
-      '';
-
-    const code = normalizeCode(rawCode);
-
-    // 1) Match por código (preferido)
-    let match = null;
-    if (code && byCode.has(code)) {
-      match = byCode.get(code);
-    }
-
-    // 2) Fallback por nombre (matcher existente)
-    if (!match) {
-      match = matchAsignaturaToMalla(record, mallaIndex);
-    }
+  const enriched = gradesData.map(record => {
+    const match = matchAsignaturaToMalla(record, mallaIndex);
 
     return {
       ...record,
-      enMalla: !!match,
-      semestreCurricular: match ? Number(match.semestre) : null,
+      enMalla: Boolean(match),
+      semestreCurricular: match ? match.semestre : null,
       codigoMalla: match ? match.codigo : null,
       nombreMalla: match ? match.nombre : null
     };
   });
+
+  const inMalla = enriched.filter(r => r.enMalla).length;
+  console.log(`[enrichGradesWithTraza] Total rows: ${enriched.length} | En malla: ${inMalla} (${((inMalla/Math.max(1,enriched.length))*100).toFixed(1)}%)`);
+
+  return enriched;
 }
