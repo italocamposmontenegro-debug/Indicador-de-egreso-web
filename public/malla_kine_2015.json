@@ -1,0 +1,114 @@
+{
+    "titulo": "Malla Curricular 2015",
+    "estructura": "SEMESTRE_ASIGNATURA",
+    "notas": {
+        "marcadores": [
+            {
+                "marcador": "*",
+                "descripcion": "Marcador presente en el listado original (significado no especificado)."
+            },
+            {
+                "marcador": "**",
+                "descripcion": "Marcador presente en el listado original (significado no especificado)."
+            }
+        ]
+    },
+    "semestres": [
+        {
+            "semestre": 1,
+            "asignaturas": [
+                "Introducción a l Kinesiología",
+                "Bases Bioquímicas *",
+                "Anatomía del Aparato Locomotor",
+                "Pensamiento Lógico Matemático",
+                "Gestión Personal"
+            ]
+        },
+        {
+            "semestre": 2,
+            "asignaturas": [
+                "Psicología y Aspectos Bioéticos",
+                "Fundamentos del Movimiento Humano *",
+                "Estructura y Función",
+                "Expresión Oral y Escrita",
+                "Herramientas y Métodos Básicos para el trabajo Científico"
+            ]
+        },
+        {
+            "semestre": 3,
+            "asignaturas": [
+                "Gestión y Salud Pública **",
+                "Biomecánica Aplicada",
+                "Neurofisiología",
+                "Fisiopatología Humana",
+                "Ingles I",
+                "Formación General"
+            ]
+        },
+        {
+            "semestre": 4,
+            "asignaturas": [
+                "Practica Integrada I",
+                "Movimiento Humano",
+                "Semiología Neurológica e Imagenología",
+                "Patología y Aspectos Farmacológicos",
+                "Ingles II",
+                "Formación General"
+            ]
+        },
+        {
+            "semestre": 5,
+            "asignaturas": [
+                "Practica Integrada II",
+                "Semiología Traumatológica e Imagenología",
+                "Control Motor",
+                "Ingles III",
+                "Formación General"
+            ]
+        },
+        {
+            "semestre": 6,
+            "asignaturas": [
+                "Evaluación del Aparato Locomotor",
+                "Evaluación del Desarrollo Normal",
+                "Fisiología Clínica del Ejercicio",
+                "Epidemiología y Bioestadistica **",
+                "Ingles IV"
+            ]
+        },
+        {
+            "semestre": 7,
+            "asignaturas": [
+                "Ejercicio Terapuetico en Aparato Locomotor",
+                "Evaluación del Desarrollo Neuromotor Atipico",
+                "Evaluación Cardiorespiratoria e Imagenología",
+                "Método Científico y Proyecto en Salud",
+                "Formación General"
+            ]
+        },
+        {
+            "semestre": 8,
+            "asignaturas": [
+                "Gerontokinesiología",
+                "Intervención Kinésica en Aparato Locomotor",
+                "Intervención Kinésica Neuromotora",
+                "Intervención Kinésica Cardiorespiratoria",
+                "Intervención Kinésica por medio de Agentes Físicos"
+            ]
+        },
+        {
+            "semestre": 9,
+            "asignaturas": [
+                "Internado profesional I",
+                "Internado profesional II"
+            ]
+        },
+        {
+            "semestre": 10,
+            "asignaturas": [
+                "Internado profesional III",
+                "Internado profesional IV"
+            ]
+        }
+    ]
+}

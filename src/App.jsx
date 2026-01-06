@@ -22,6 +22,25 @@ function App() {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
+  // Load default curriculum automatically
+  useEffect(() => {
+    const loadDefaultCurriculum = async () => {
+      try {
+        const response = await fetch(import.meta.env.BASE_URL + 'malla_kine_2015.json');
+        if (response.ok) {
+          const data = await response.json();
+          setCurriculumData(data);
+          console.log('Malla curricular 2015 cargada automáticamente');
+        } else {
+          console.warn('No se pudo cargar la malla por defecto');
+        }
+      } catch (error) {
+        console.error('Error cargando malla:', error);
+      }
+    };
+    loadDefaultCurriculum();
+  }, []);
+
   // Effect to enrich grades when curriculum or grades load
   useEffect(() => {
     if (gradesData.length > 0 && curriculumData) {
