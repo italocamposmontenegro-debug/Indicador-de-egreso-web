@@ -22,23 +22,30 @@ function App() {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
-  // Load default curriculum automatically
+  // Load default data automatically
   useEffect(() => {
-    const loadDefaultCurriculum = async () => {
+    const loadDefaultData = async () => {
       try {
-        const response = await fetch(import.meta.env.BASE_URL + 'malla_kine_2015.json');
-        if (response.ok) {
-          const data = await response.json();
-          setCurriculumData(data);
+        // Load Malla
+        const mallaRes = await fetch(import.meta.env.BASE_URL + 'malla_kine_2015.json');
+        if (mallaRes.ok) {
+          const mallaData = await mallaRes.json();
+          setCurriculumData(mallaData);
           console.log('Malla curricular 2015 cargada automáticamente');
-        } else {
-          console.warn('No se pudo cargar la malla por defecto');
+        }
+
+        // Load Criticality
+        const critRes = await fetch(import.meta.env.BASE_URL + 'criticidad_kine_default.json');
+        if (critRes.ok) {
+          const critData = await critRes.json();
+          setCriticalityData(critData);
+          console.log('Datos de criticidad por defecto cargados');
         }
       } catch (error) {
-        console.error('Error cargando malla:', error);
+        console.error('Error cargando datos por defecto:', error);
       }
     };
-    loadDefaultCurriculum();
+    loadDefaultData();
   }, []);
 
   // Effect to enrich grades when curriculum or grades load

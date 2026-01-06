@@ -1,0 +1,72 @@
+[
+    {
+        "asignatura": "Anatomía del Aparato Locomotor",
+        "semestre": 1,
+        "criticidad": "muy alta",
+        "Porcentaje_4": 40,
+        "Porcentaje_3": 30
+    },
+    {
+        "asignatura": "Bases Bioquímicas",
+        "semestre": 1,
+        "criticidad": "alta",
+        "Porcentaje_4": 30,
+        "Porcentaje_3": 20
+    },
+    {
+        "asignatura": "Biomecánica Aplicada",
+        "semestre": 3,
+        "criticidad": "muy alta",
+        "Porcentaje_4": 45,
+        "Porcentaje_3": 35
+    },
+    {
+        "asignatura": "Neurofisiología",
+        "semestre": 3,
+        "criticidad": "muy alta",
+        "Porcentaje_4": 42,
+        "Porcentaje_3": 32
+    },
+    {
+        "asignatura": "Fisiopatología Humana",
+        "semestre": 3,
+        "criticidad": "alta",
+        "Porcentaje_4": 28,
+        "Porcentaje_3": 18
+    },
+    {
+        "asignatura": "HERR Y MÉTODOS BÁSICOS PARA TR",
+        "semestre": 2,
+        "criticidad": "media",
+        "Porcentaje_4": 15,
+        "Porcentaje_3": 10
+    },
+    {
+        "asignatura": "FUNDAMENTOS DEL MOVIMIENTO HUM",
+        "semestre": 2,
+        "criticidad": "media",
+        "Porcentaje_4": 18,
+        "Porcentaje_3": 12
+    },
+    {
+        "asignatura": "EVALUACIÓN DEL APARATO LOCOMOT",
+        "semestre": 6,
+        "criticidad": "muy alta",
+        "Porcentaje_4": 38,
+        "Porcentaje_3": 28
+    },
+    {
+        "asignatura": "INTERVENCIÓN KINÉSICA EN APARA",
+        "semestre": 8,
+        "criticidad": "muy alta",
+        "Porcentaje_4": 41,
+        "Porcentaje_3": 31
+    },
+    {
+        "asignatura": "SEMIOLOGÍA NEUROLÓGICA E IMAG",
+        "semestre": 4,
+        "criticidad": "alta",
+        "Porcentaje_4": 33,
+        "Porcentaje_3": 23
+    }
+]
