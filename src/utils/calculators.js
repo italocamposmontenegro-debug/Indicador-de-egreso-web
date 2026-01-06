@@ -197,34 +197,57 @@ export function calculatePermanence(studentRecords, audit = null) {
     return 1;
   }
 
-  // Get years, filtering absurd values
-  const years = records
-    .map(r => parseInt(r.anio, 10))
-    .filter(y => Number.isFinite(y) && y >= 2000 && y <= 2100);
+  // Calculate duration in semesters for better precision
+  // Only consider records with valid year/semester
+  const validRecords = records.filter(r => {
+    const y = parseInt(r.anio, 10);
+    return Number.isFinite(y) && y >= 2000 && y <= 2100;
+  });
 
-  if (years.length === 0) {
-    console.warn('[Permanencia] No valid years found in EN MALLA records');
+  if (validRecords.length === 0) {
     if (audit) {
-      audit.permanence = { anioMin: null, anioMax: null, anos: 0, value: 1 };
+      audit.permanence = { anioMin: null, anioMax: null, anos: 0, retraso: 0, value: 1 };
     }
     return 1;
   }
 
-  const minYear = Math.min(...years);
-  const maxYear = Math.max(...years);
-  const yearsStudied = (maxYear - minYear + 1);
+  // Calculate semester indices: Year * 2 + (Sem - 1)
+  const indices = validRecords.map(r => {
+    const y = parseInt(r.anio, 10);
+    const s = parseInt(r.semestre, 10) || 1; // Default to sem 1 if missing
+    return (y * 2) + Math.max(0, Math.min(1, s - 1));
+  });
+
+  const minIndex = Math.min(...indices);
+  const maxIndex = Math.max(...indices);
+
+  // Duration in semesters (inclusive)
+  const semestersStudied = maxIndex - minIndex + 1;
+  const yearsStudied = semestersStudied / 2;
 
   // C3 = 1 - (retraso / 5), donde retraso = añosEstudio - 5
-  // Si terminó en 5 años (o menos) -> Score 1 (100%)
-  // Si terminó en 6 años -> Retraso 1 -> 1 - 0.2 = 0.8
+  // Penalize only if duration > 5 years per new spec
   const delay = Math.max(0, yearsStudied - 5);
   const permanence = 1 - (delay / 5);
   const clamped = Math.max(0, Math.min(1, permanence));
 
-  console.log('[Permanencia]', { minYear, maxYear, yearsStudied, delay, permanence: clamped });
+  console.log('[Permanencia] (Semestral)', { semesters: semestersStudied, years: yearsStudied, delay, permanence: clamped });
 
   if (audit) {
-    audit.permanence = { anioMin: minYear, anioMax: maxYear, anos: yearsStudied, retraso: delay, value: clamped };
+    // Audit with precision
+    const startYear = Math.floor(minIndex / 2);
+    const startSem = (minIndex % 2) + 1;
+    const endYear = Math.floor(maxIndex / 2);
+    const endSem = (maxIndex % 2) + 1;
+
+    audit.permanence = {
+      inicio: `${startYear}-${startSem}`,
+      fin: `${endYear}-${endSem}`,
+      semestres: semestersStudied,
+      anos: yearsStudied,
+      retraso: delay,
+      value: clamped
+    };
   }
 
   return clamped;

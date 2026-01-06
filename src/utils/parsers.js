@@ -60,8 +60,8 @@ function consolidateGradeRecords(records) {
       finalGrade = validItems > 0 ? sum / validItems : 0;
     }
 
-    // Round to 2 decimals for presentation
-    finalGrade = Math.round(finalGrade * 100) / 100;
+    // Standard academic rounding to 1 decimal place (e.g. 3.95 -> 4.0)
+    finalGrade = Math.round(finalGrade * 10) / 10;
 
     return {
       ...meta,
