@@ -214,14 +214,17 @@ export function calculatePermanence(studentRecords, audit = null) {
   const maxYear = Math.max(...years);
   const yearsStudied = (maxYear - minYear + 1);
 
-  // C3 = 1 - (años/5), clamp 0..1
-  const permanence = 1 - (yearsStudied / 5);
+  // C3 = 1 - (retraso / 5), donde retraso = añosEstudio - 5
+  // Si terminó en 5 años (o menos) -> Score 1 (100%)
+  // Si terminó en 6 años -> Retraso 1 -> 1 - 0.2 = 0.8
+  const delay = Math.max(0, yearsStudied - 5);
+  const permanence = 1 - (delay / 5);
   const clamped = Math.max(0, Math.min(1, permanence));
 
-  console.log('[Permanencia]', { minYear, maxYear, yearsStudied, permanence: clamped });
+  console.log('[Permanencia]', { minYear, maxYear, yearsStudied, delay, permanence: clamped });
 
   if (audit) {
-    audit.permanence = { anioMin: minYear, anioMax: maxYear, anos: yearsStudied, value: clamped };
+    audit.permanence = { anioMin: minYear, anioMax: maxYear, anos: yearsStudied, retraso: delay, value: clamped };
   }
 
   return clamped;
@@ -603,7 +606,7 @@ export function calculateExitIndicator(studentRecords, criticalityData, curricul
       value: compValues.permanence,
       weight: 0.20,
       label: 'Permanencia',
-      description: '1 - (Años cursados / 5)'
+      description: '1 - (Años de retraso / 5)'
     },
     repetition: {
       value: compValues.repetition,
@@ -742,7 +745,7 @@ export function calculateExitIndicatorWithAudit(studentRecords, criticalityData,
       value: compValues.permanence,
       weight: 0.20,
       label: 'Permanencia',
-      description: '1 - (Años cursados / 5)'
+      description: '1 - (Años de retraso / 5)'
     },
     repetition: {
       value: compValues.repetition,
