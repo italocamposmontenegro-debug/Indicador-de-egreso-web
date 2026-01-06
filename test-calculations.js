@@ -1,203 +1,134 @@
 /**
- * Unit Tests for Exit Indicator Calculations
- * Updated to match original specifications
+ * Unit Tests for Exit Indicator Calculations - UPDATED (Jan 2026)
  * Run: node test-calculations.js
  */
 
+import {
+    calculateApprovalRate,
+    calculatePerformance,
+    calculatePermanence,
+    calculateRepetition,
+    calculateCriticality,
+    calculateRelevance,
+    calculateExitIndicatorWithAudit
+} from './src/utils/calculators.js';
+
 // Test data - Student with 2 years of study
 const student12345678 = [
-    { codigoAsignatura: "KIN101", nota: 5.5, semestre: 1, anio: 2022, oportunidad: 1 },
-    { codigoAsignatura: "KIN102", nota: 6.0, semestre: 1, anio: 2022, oportunidad: 1 },
-    { codigoAsignatura: "KIN103", nota: 4.5, semestre: 1, anio: 2022, oportunidad: 1 },
-    { codigoAsignatura: "KIN104", nota: 3.5, semestre: 1, anio: 2022, oportunidad: 1 }, // Failed first
-    { codigoAsignatura: "KIN104", nota: 4.2, semestre: 1, anio: 2023, oportunidad: 2 }, // Passed second
-    { codigoAsignatura: "KIN201", nota: 5.8, semestre: 2, anio: 2022, oportunidad: 1 },
-    { codigoAsignatura: "KIN202", nota: 6.2, semestre: 2, anio: 2022, oportunidad: 1 },
-    { codigoAsignatura: "KIN203", nota: 5.0, semestre: 2, anio: 2022, oportunidad: 1 },
-    { codigoAsignatura: "KIN301", nota: 5.5, semestre: 3, anio: 2023, oportunidad: 1 },
-    { codigoAsignatura: "KIN302", nota: 4.8, semestre: 3, anio: 2023, oportunidad: 1 }
+    { codigoAsignatura: "KIN101", nota: 5.5, semestre: 1, anio: 2022, oportunidad: 1, enMalla: true, semestreCurricular: 1 },
+    { codigoAsignatura: "KIN102", nota: 6.0, semestre: 1, anio: 2022, oportunidad: 1, enMalla: true, semestreCurricular: 1 },
+    { codigoAsignatura: "KIN103", nota: 4.5, semestre: 1, anio: 2022, oportunidad: 1, enMalla: true, semestreCurricular: 1 },
+    { codigoAsignatura: "KIN104", nota: 3.5, semestre: 1, anio: 2022, oportunidad: 1, enMalla: true, semestreCurricular: 1 }, // Failed first
+    { codigoAsignatura: "KIN104", nota: 4.2, semestre: 1, anio: 2023, oportunidad: 2, enMalla: true, semestreCurricular: 1 }, // Passed second
+    { codigoAsignatura: "KIN201", nota: 5.8, semestre: 2, anio: 2022, oportunidad: 1, enMalla: true, semestreCurricular: 2 },
+    { codigoAsignatura: "KIN202", nota: 6.2, semestre: 2, anio: 2022, oportunidad: 1, enMalla: true, semestreCurricular: 2 },
+    { codigoAsignatura: "KIN203", nota: 5.0, semestre: 2, anio: 2022, oportunidad: 1, enMalla: true, semestreCurricular: 2 },
+    { codigoAsignatura: "KIN301", nota: 5.5, semestre: 3, anio: 2023, oportunidad: 1, enMalla: true, semestreCurricular: 3 },
+    { codigoAsignatura: "KIN302", nota: 4.8, semestre: 3, anio: 2023, oportunidad: 1, enMalla: true, semestreCurricular: 3 }
 ];
 
-// Test data - Student with 3 years and multiple repetitions
+// Test data - Student with 3 years, multiple repetitions
 const student98765432 = [
-    { codigoAsignatura: "KIN101", nota: 4.0, semestre: 1, anio: 2021, oportunidad: 1 },
-    { codigoAsignatura: "KIN102", nota: 3.8, semestre: 1, anio: 2021, oportunidad: 1 }, // Failed
-    { codigoAsignatura: "KIN102", nota: 4.2, semestre: 1, anio: 2022, oportunidad: 2 }, // Passed
-    { codigoAsignatura: "KIN103", nota: 3.5, semestre: 1, anio: 2021, oportunidad: 1 }, // Failed
-    { codigoAsignatura: "KIN103", nota: 3.2, semestre: 1, anio: 2022, oportunidad: 2 }, // Failed again
-    { codigoAsignatura: "KIN103", nota: 4.1, semestre: 1, anio: 2023, oportunidad: 3 }, // Passed
-    { codigoAsignatura: "KIN201", nota: 4.5, semestre: 2, anio: 2022, oportunidad: 1 },
-    { codigoAsignatura: "KIN202", nota: 4.0, semestre: 2, anio: 2022, oportunidad: 1 }
+    { codigoAsignatura: "KIN101", nota: 4.0, semestre: 1, anio: 2021, oportunidad: 1, enMalla: true, semestreCurricular: 1 },
+    { codigoAsignatura: "KIN102", nota: 3.8, semestre: 1, anio: 2021, oportunidad: 1, enMalla: true, semestreCurricular: 1 }, // Failed
+    { codigoAsignatura: "KIN102", nota: 4.2, semestre: 1, anio: 2022, oportunidad: 2, enMalla: true, semestreCurricular: 1 }, // Passed
+    { codigoAsignatura: "KIN103", nota: 3.5, semestre: 1, anio: 2021, oportunidad: 1, enMalla: true, semestreCurricular: 1 }, // Failed
+    { codigoAsignatura: "KIN103", nota: 3.2, semestre: 1, anio: 2022, oportunidad: 2, enMalla: true, semestreCurricular: 1 }, // Failed again
+    { codigoAsignatura: "KIN103", nota: 4.1, semestre: 1, anio: 2023, oportunidad: 3, enMalla: true, semestreCurricular: 1 }, // Passed
+    { codigoAsignatura: "KIN201", nota: 4.5, semestre: 2, anio: 2022, oportunidad: 1, enMalla: true, semestreCurricular: 2 },
+    { codigoAsignatura: "KIN202", nota: 4.0, semestre: 2, anio: 2022, oportunidad: 1, enMalla: true, semestreCurricular: 2 } // 8 rows total
 ];
 
-// === CALCULATION FUNCTIONS (matching original specifications) ===
+// Mock Criticality Data
+const criticalityData = [
+    { codigo: "KIN101", criticidad: "muy alta", Porcentaje_4: 35 }, // Score 5
+    { codigo: "KIN102", criticidad: "muy alta" }, // Score 5
+    { codigo: "KIN103", criticidad: "alta" }, // Score 5
+    { codigo: "KIN104", criticidad: "media" }, // Score 3
+    { codigo: "KIN201", criticidad: "muy alta" }, // Score 5
+    { codigo: "KIN202", criticidad: "muy alta" }, // Score 5
+    { codigo: "KIN203", criticidad: "alta" }, // Score 5
+    { codigo: "KIN301", criticidad: "muy alta" }, // Score 5
+    { codigo: "KIN302", criticidad: "alta" } // Score 5
+];
 
-function calculateApprovalRate(studentRecords) {
-    if (!studentRecords || studentRecords.length === 0) return 0;
+// Mock Curriculum Data
+const curriculumData = { semestres_totales: 10, semestres: [] };
 
-    const coursesTaken = new Map();
-    studentRecords.forEach(record => {
-        const key = record.codigoAsignatura || record.nombreAsignatura;
-        if (!coursesTaken.has(key)) {
-            coursesTaken.set(key, { approved: false });
-        }
-        if (record.nota >= 4.0) {
-            coursesTaken.get(key).approved = true;
-        }
-    });
+console.log("=== UNIT TESTS FOR EXIT INDICATOR (NEW SPECS JAN 2026) ===\n");
 
-    const totalCourses = coursesTaken.size;
-    const approvedCourses = Array.from(coursesTaken.values()).filter(c => c.approved).length;
-    return totalCourses > 0 ? approvedCourses / totalCourses : 0;
+// --- TEST 1: Approval Rate (Counts ALL rows) ---
+console.log("--- TEST 1: Approval Rate ---");
+const ar1 = calculateApprovalRate(student12345678);
+// student12345678: 10 rows, 1 failed (KIN104 row 4). 9 Passed.
+// Rate = 9 / 10 = 0.9
+console.log(`Student 1 (1 fail / 10 rows): ${(ar1 * 100).toFixed(1)}% (Expected: 90.0%)`);
+
+const ar2 = calculateApprovalRate(student98765432);
+// student98765432: 8 rows. unique courses: 101(P), 102(F,P), 103(F,F,P), 201(P), 202(P)
+// Fails: KIN102(1), KIN103(1), KIN103(2). Total fails = 3.
+// Passes: 5. Total rows = 8.
+// Rate = 5 / 8 = 0.625
+console.log(`Student 2 (3 fails / 8 rows): ${(ar2 * 100).toFixed(1)}% (Expected: 62.5%)`);
+
+
+// --- TEST 2: Performance (Avg of ALL rows / 7.0) ---
+console.log("\n--- TEST 2: Performance ---");
+// Avg student 1: (5.5+6.0+4.5+3.5+4.2+5.8+6.2+5.0+5.5+4.8) / 10 = 51 / 10 = 5.1
+// Normalized: 5.1 / 7 = 0.7285...
+const p1 = calculatePerformance(student12345678);
+console.log(`Student 1 Avg: ${(p1 * 7).toFixed(2)} (Expected: 5.10) -> ${(p1 * 100).toFixed(2)}%`);
+
+
+// --- TEST 3: Permanence (1 - years/5) ---
+console.log("\n--- TEST 3: Permanence ---");
+const perm1 = calculatePermanence(student12345678);
+// 2022-2023 = 2 years. 1 - 2/5 = 0.6
+console.log(`Student 1 (2 years): ${(perm1 * 100).toFixed(1)}% (Expected: 60.0%)`);
+
+const perm2 = calculatePermanence(student98765432);
+// 2021-2023 = 3 years. 1 - 3/5 = 0.4
+console.log(`Student 2 (3 years): ${(perm2 * 100).toFixed(1)}% (Expected: 40.0%)`);
+
+
+// --- TEST 4: Repetition (1 - sum(attempts-1)/total_rows) ---
+console.log("\n--- TEST 4: Repetition ---");
+const rep1 = calculateRepetition(student12345678);
+// KIN104 has 2 attempts (1 rep). Total rows = 10.
+// Formula: 1 - (1 / 10) = 0.9
+console.log(`Student 1 (1 rep / 10 rows): ${(rep1 * 100).toFixed(1)}% (Expected: 90.0%)`);
+
+const rep2 = calculateRepetition(student98765432);
+// KIN102 (2 att -> 1 rep), KIN103 (3 att -> 2 rep). Total reps = 3.
+// Total rows = 8.
+// Formula: 1 - (3 / 8) = 1 - 0.375 = 0.625
+console.log(`Student 2 (3 reps / 8 rows): ${(rep2 * 100).toFixed(1)}% (Expected: 62.5%)`);
+
+
+// --- TEST 5: Criticality (sum scores / 5*total_unique_courses) ---
+console.log("\n--- TEST 5: Criticality ---");
+const crit1 = calculateCriticality(student12345678, criticalityData);
+// Courses: 9 unique.
+// Scores: 5+5+5+3+5+5+5+5+5 = 43.
+// Max: 9 * 5 = 45.
+// Result: 43 / 45 = 0.955
+console.log(`Student 1 Criticality: ${(crit1 * 100).toFixed(1)}% (Expected: ~95.6%)`);
+
+
+// --- TEST 6: Relevance (LastSem / MaxPlan) ---
+console.log("\n--- TEST 6: Relevance ---");
+const rel1 = calculateRelevance(student12345678, curriculumData);
+console.log(`Student 1 Relevance: ${(rel1 * 100).toFixed(1)}% (Expected: 30.0%)`);
+
+
+// --- FULL AUDIT ---
+console.log("\n--- TEST 7: Full Audit Check ---");
+const auditResult = calculateExitIndicatorWithAudit(student12345678, criticalityData, curriculumData, { genero: 'Mujer', ciudad: 'Viña', tipoColegio: 'Municipal' });
+console.log("Total Score:", auditResult.totalScore.toFixed(2) + "%");
+console.log("Audit Object Present:", !!auditResult.audit);
+if (auditResult.audit) {
+    console.log("- Audit Approval:", auditResult.audit.approvalRate.rate);
+    console.log("- Audit Repetition:", auditResult.audit.repetition.value);
 }
 
-function calculatePerformance(studentRecords) {
-    if (!studentRecords || studentRecords.length === 0) return 0;
-
-    const bestGrades = new Map();
-    studentRecords.forEach(record => {
-        const key = record.codigoAsignatura || record.nombreAsignatura;
-        if (!bestGrades.has(key) || record.nota > bestGrades.get(key)) {
-            bestGrades.set(key, record.nota);
-        }
-    });
-
-    const grades = Array.from(bestGrades.values()).filter(g => g > 0);
-    if (grades.length === 0) return 0;
-
-    const average = grades.reduce((sum, g) => sum + g, 0) / grades.length;
-    return average / 7.0;
-}
-
-// FIXED: Original spec: 1 - (años / 5)
-function calculatePermanence(studentRecords) {
-    if (!studentRecords || studentRecords.length === 0) return 1;
-
-    const years = studentRecords.map(r => r.anio).filter(y => y > 0);
-    if (years.length === 0) return 1;
-
-    const minYear = Math.min(...years);
-    const maxYear = Math.max(...years);
-    const yearsStudied = maxYear - minYear + 1;
-
-    // Original spec: 1 - (años / 5), clamped to [0, 5] years
-    const clampedYears = Math.min(Math.max(yearsStudied, 0), 5);
-    const permanence = 1 - (clampedYears / 5);
-    return Math.max(0, Math.min(1, permanence));
-}
-
-// FIXED: Original spec: 1 - (repeticiones / total)
-function calculateRepetition(studentRecords) {
-    if (!studentRecords || studentRecords.length === 0) return 1;
-
-    const courseAttempts = new Map();
-    studentRecords.forEach(record => {
-        const key = record.codigoAsignatura || record.nombreAsignatura;
-        const attempt = record.oportunidad || 1;
-        if (!courseAttempts.has(key) || attempt > courseAttempts.get(key)) {
-            courseAttempts.set(key, attempt);
-        }
-    });
-
-    const totalCourses = courseAttempts.size;
-    if (totalCourses === 0) return 1;
-
-    const totalRepetitions = Array.from(courseAttempts.values())
-        .reduce((sum, attempt) => sum + (attempt - 1), 0);
-
-    // Original spec: 1 - (repeticiones / total), clamped to [0, 1]
-    const repetitionIndex = 1 - (totalRepetitions / totalCourses);
-    return Math.max(0, Math.min(1, repetitionIndex));
-}
-
-// FIXED: Original spec: suma puntajes / (5 × total)
-function calculateCriticality(studentRecords) {
-    if (!studentRecords || studentRecords.length === 0) return 0.5;
-
-    const coursesTaken = new Set();
-    studentRecords.forEach(record => {
-        const key = record.codigoAsignatura || record.nombreAsignatura;
-        coursesTaken.add(key);
-    });
-
-    const totalCourses = coursesTaken.size;
-    if (totalCourses === 0) return 0.5;
-
-    // Default criticality = 3 (media) when no data
-    const defaultCritScore = 3;
-    const totalCriticalityScore = totalCourses * defaultCritScore;
-
-    // Original spec: suma / (5 × total)
-    const maxPossibleScore = 5 * totalCourses;
-    return totalCriticalityScore / maxPossibleScore; // = 3/5 = 0.6 when no criticality data
-}
-
-// === RUN TESTS ===
-console.log("=== UNIT TESTS FOR EXIT INDICATOR (Original Specs) ===\n");
-
-console.log("--- Student 12345678 (2 years, 1 repetition) ---");
-console.log("Years: 2022-2023 = 2 years");
-console.log("Courses: 10 unique, all approved");
-console.log("Repetitions: 1 (KIN104 with 2 attempts)\n");
-
-let approval = calculateApprovalRate(student12345678);
-console.log(`1. Approval Rate: ${(approval * 100).toFixed(1)}% (expected: 100%)`);
-
-let performance = calculatePerformance(student12345678);
-console.log(`2. Performance: ${(performance * 100).toFixed(1)}% (avg: ${(performance * 7).toFixed(2)}/7.0)`);
-
-let permanence = calculatePermanence(student12345678);
-console.log(`3. Permanence: ${(permanence * 100).toFixed(1)}% (2 years → 1 - 2/5 = 60%)`);
-
-let repetition = calculateRepetition(student12345678);
-console.log(`4. Repetition: ${(repetition * 100).toFixed(1)}% (1 rep / 10 courses → 1 - 0.1 = 90%)`);
-
-let criticality = calculateCriticality(student12345678);
-console.log(`5. Criticality: ${(criticality * 100).toFixed(1)}% (default 3 each → 30/50 = 60%)`);
-
-// Weights
-const weights = { approval: 0.25, performance: 0.20, permanence: 0.20, repetition: 0.10, criticality: 0.10, relevance: 0.10, demographic: 0.05 };
-
-let total =
-    (approval * weights.approval) +
-    (performance * weights.performance) +
-    (permanence * weights.permanence) +
-    (repetition * weights.repetition) +
-    (criticality * weights.criticality) +
-    (0.3 * weights.relevance) + // S3 of 10
-    (0.5 * weights.demographic); // Default
-
-console.log(`\nTOTAL INDICATOR: ${(total * 100).toFixed(1)}%\n`);
-
-console.log("--- Student 98765432 (3 years, 3 total repetitions) ---");
-console.log("Years: 2021-2023 = 3 years");
-console.log("Courses: 6 unique, all eventually approved");
-console.log("Repetitions: KIN102 (1 extra), KIN103 (2 extra) = 3 total\n");
-
-approval = calculateApprovalRate(student98765432);
-console.log(`1. Approval Rate: ${(approval * 100).toFixed(1)}% (expected: 100%)`);
-
-performance = calculatePerformance(student98765432);
-console.log(`2. Performance: ${(performance * 100).toFixed(1)}% (avg: ${(performance * 7).toFixed(2)}/7.0)`);
-
-permanence = calculatePermanence(student98765432);
-console.log(`3. Permanence: ${(permanence * 100).toFixed(1)}% (3 years → 1 - 3/5 = 40%)`);
-
-repetition = calculateRepetition(student98765432);
-console.log(`4. Repetition: ${(repetition * 100).toFixed(1)}% (3 reps / 6 courses → 1 - 0.5 = 50%)`);
-
-criticality = calculateCriticality(student98765432);
-console.log(`5. Criticality: ${(criticality * 100).toFixed(1)}% (default → 60%)`);
-
-total =
-    (approval * weights.approval) +
-    (performance * weights.performance) +
-    (permanence * weights.permanence) +
-    (repetition * weights.repetition) +
-    (criticality * weights.criticality) +
-    (0.2 * weights.relevance) + // S2 of 10
-    (0.5 * weights.demographic);
-
-console.log(`\nTOTAL INDICATOR: ${(total * 100).toFixed(1)}%\n`);
-
-console.log("=== TESTS COMPLETE ===");
+console.log("\n=== TESTS COMPLETE ===");

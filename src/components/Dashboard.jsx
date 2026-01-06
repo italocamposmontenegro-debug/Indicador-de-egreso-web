@@ -1,9 +1,10 @@
-import { Award, BookOpen, GraduationCap, TrendingUp, BarChart3, Clock, Users, AlertCircle } from 'lucide-react';
+import { useState } from 'react';
+import { Award, BookOpen, GraduationCap, TrendingUp, BarChart3, Clock, Users, AlertCircle, ChevronDown, ChevronUp, Eye } from 'lucide-react';
 import ScoreCard from './ScoreCard';
 import RecommendationPanel from './RecommendationPanel';
 import RadarChart from './RadarChart';
 import ExportPanel from './ExportPanel';
-import { calculateExitIndicator } from '../utils/calculators';
+import { calculateExitIndicatorWithAudit } from '../utils/calculators';
 import { generateRecommendations, getSummaryText } from '../utils/recommendations';
 import { enrichGradesWithTraza } from '../utils/parsers';
 import { buildMallaIndex } from '../utils/mallaIndex';
@@ -19,6 +20,8 @@ const componentIcons = {
 };
 
 export default function Dashboard({ studentRecords, criticalityData, curriculumData, demographicData, studentRut }) {
+    const [showAudit, setShowAudit] = useState(false);
+
     if (!studentRecords || studentRecords.length === 0) {
         return (
             <div className="dashboard-empty">
@@ -59,7 +62,6 @@ export default function Dashboard({ studentRecords, criticalityData, curriculumD
     console.log("Top unmatched:", topUnmatched);
 
     // Deep Debug: Ver qué hay en el index
-    const mallaIndex = enrichGradesWithTraza.mallaIndex; // We'll need to expose this or rebuild it
     if (curriculumData) {
         const tempIndex = buildMallaIndex(curriculumData);
         console.log("Muestra Index (primeros 5 nombres):", Array.from(tempIndex.byName.keys()).slice(0, 5));
@@ -116,7 +118,8 @@ export default function Dashboard({ studentRecords, criticalityData, curriculumD
         );
     }
 
-    const indicatorResult = calculateExitIndicator(
+    // Use audit mode calculator
+    const indicatorResult = calculateExitIndicatorWithAudit(
         enrichedGrades,
         criticalityData,
         curriculumData,
@@ -126,7 +129,7 @@ export default function Dashboard({ studentRecords, criticalityData, curriculumD
     const recommendations = generateRecommendations(indicatorResult, studentRecords, demographicData);
     const summaryText = getSummaryText(indicatorResult, demographicData);
 
-    const { components, totalScore, level, levelClass, stats, malla } = indicatorResult;
+    const { components, totalScore, level, levelClass, stats, malla, audit, courseBreakdown } = indicatorResult;
 
     return (
         <div className="dashboard">
@@ -268,6 +271,236 @@ export default function Dashboard({ studentRecords, criticalityData, curriculumD
             {/* Radar Chart Visualization */}
             <RadarChart components={components} />
 
+            {/* Audit Mode Toggle */}
+            <div className="audit-section">
+                <button
+                    className="btn btn-secondary audit-toggle"
+                    onClick={() => setShowAudit(!showAudit)}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        margin: '0 auto',
+                        padding: '12px 24px',
+                        fontSize: '1rem'
+                    }}
+                >
+                    <Eye size={18} />
+                    {showAudit ? 'Ocultar Modo Auditoría' : 'Ver Modo Auditoría'}
+                    {showAudit ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                </button>
+
+                {showAudit && audit && (
+                    <div className="audit-content" style={{
+                        marginTop: '1.5rem',
+                        background: 'var(--card-bg)',
+                        borderRadius: '12px',
+                        padding: '1.5rem',
+                        border: '1px solid var(--border-color)'
+                    }}>
+                        <h3 style={{ marginBottom: '1.5rem', color: 'var(--primary-color)' }}>
+                            📊 Modo Auditoría - Desglose Detallado
+                        </h3>
+
+                        {/* Audit Summary Grid */}
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                            gap: '1rem',
+                            marginBottom: '2rem'
+                        }}>
+                            {/* Approval Rate */}
+                            {audit.approvalRate && (
+                                <div className="audit-card" style={{
+                                    background: 'var(--bg-color)',
+                                    padding: '1rem',
+                                    borderRadius: '8px',
+                                    border: '1px solid var(--border-color)'
+                                }}>
+                                    <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem' }}>Tasa de Aprobación</h4>
+                                    <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                                        Aprobados: <strong>{audit.approvalRate.aprobados}</strong> /
+                                        Total: <strong>{audit.approvalRate.total}</strong>
+                                        <br />
+                                        = {(audit.approvalRate.rate * 100).toFixed(1)}%
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Performance */}
+                            {audit.performance && (
+                                <div className="audit-card" style={{
+                                    background: 'var(--bg-color)',
+                                    padding: '1rem',
+                                    borderRadius: '8px',
+                                    border: '1px solid var(--border-color)'
+                                }}>
+                                    <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem' }}>Rendimiento</h4>
+                                    <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                                        Promedio notas: <strong>{audit.performance.promedio.toFixed(2)}</strong>
+                                        <br />
+                                        Normalizado (÷7): {(audit.performance.normalized * 100).toFixed(1)}%
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Permanence */}
+                            {audit.permanence && (
+                                <div className="audit-card" style={{
+                                    background: 'var(--bg-color)',
+                                    padding: '1rem',
+                                    borderRadius: '8px',
+                                    border: '1px solid var(--border-color)'
+                                }}>
+                                    <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem' }}>Permanencia</h4>
+                                    <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                                        Años: {audit.permanence.anioMin} - {audit.permanence.anioMax}
+                                        <br />
+                                        Total: <strong>{audit.permanence.anos} años</strong>
+                                        <br />
+                                        1 - ({audit.permanence.anos}/5) = {(audit.permanence.value * 100).toFixed(1)}%
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Repetition */}
+                            {audit.repetition && (
+                                <div className="audit-card" style={{
+                                    background: 'var(--bg-color)',
+                                    padding: '1rem',
+                                    borderRadius: '8px',
+                                    border: '1px solid var(--border-color)'
+                                }}>
+                                    <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem' }}>Repetición</h4>
+                                    <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                                        Repeticiones: <strong>{audit.repetition.totalReps}</strong>
+                                        <br />
+                                        Total filas: {audit.repetition.totalFilas}
+                                        <br />
+                                        = {(audit.repetition.value * 100).toFixed(1)}%
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Criticality */}
+                            {audit.criticality && (
+                                <div className="audit-card" style={{
+                                    background: 'var(--bg-color)',
+                                    padding: '1rem',
+                                    borderRadius: '8px',
+                                    border: '1px solid var(--border-color)'
+                                }}>
+                                    <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem' }}>Criticidad</h4>
+                                    <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                                        Suma puntajes: <strong>{audit.criticality.totalScore}</strong>
+                                        <br />
+                                        Máximo posible: {audit.criticality.maxScore}
+                                        <br />
+                                        = {(audit.criticality.value * 100).toFixed(1)}%
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Relevance */}
+                            {audit.relevance && (
+                                <div className="audit-card" style={{
+                                    background: 'var(--bg-color)',
+                                    padding: '1rem',
+                                    borderRadius: '8px',
+                                    border: '1px solid var(--border-color)'
+                                }}>
+                                    <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem' }}>Relevancia Semestre</h4>
+                                    <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                                        Semestre máx: <strong>{audit.relevance.semestreMax}</strong>
+                                        <br />
+                                        Plan máx: {audit.relevance.planMax}
+                                        <br />
+                                        = {(audit.relevance.value * 100).toFixed(1)}%
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Demographic */}
+                            {audit.demographic && (
+                                <div className="audit-card" style={{
+                                    background: 'var(--bg-color)',
+                                    padding: '1rem',
+                                    borderRadius: '8px',
+                                    border: '1px solid var(--border-color)'
+                                }}>
+                                    <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem' }}>Índice Demográfico</h4>
+                                    <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                                        G (Género): <strong>{audit.demographic.G}</strong> ({audit.demographic.genero || 'N/A'})
+                                        <br />
+                                        C (Ciudad): <strong>{audit.demographic.C}</strong> ({audit.demographic.ciudad || 'N/A'})
+                                        <br />
+                                        L (Colegio): <strong>{audit.demographic.L}</strong> ({audit.demographic.colegio || 'N/A'})
+                                        <br />
+                                        = ({audit.demographic.G}+{audit.demographic.C}+{audit.demographic.L})/3 = {(audit.demographic.value * 100).toFixed(1)}%
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Course Breakdown Table */}
+                        {courseBreakdown && courseBreakdown.length > 0 && (
+                            <div>
+                                <h4 style={{ marginBottom: '1rem' }}>📚 Desglose por Asignatura</h4>
+                                <div style={{ overflowX: 'auto' }}>
+                                    <table style={{
+                                        width: '100%',
+                                        borderCollapse: 'collapse',
+                                        fontSize: '0.85rem'
+                                    }}>
+                                        <thead>
+                                            <tr style={{ background: 'var(--bg-color)' }}>
+                                                <th style={{ padding: '10px', textAlign: 'left', borderBottom: '2px solid var(--border-color)' }}>Asignatura</th>
+                                                <th style={{ padding: '10px', textAlign: 'center', borderBottom: '2px solid var(--border-color)' }}>Código</th>
+                                                <th style={{ padding: '10px', textAlign: 'center', borderBottom: '2px solid var(--border-color)' }}>Intentos</th>
+                                                <th style={{ padding: '10px', textAlign: 'center', borderBottom: '2px solid var(--border-color)' }}>Nota Prom.</th>
+                                                <th style={{ padding: '10px', textAlign: 'center', borderBottom: '2px solid var(--border-color)' }}>Criticidad</th>
+                                                <th style={{ padding: '10px', textAlign: 'center', borderBottom: '2px solid var(--border-color)' }}>Semestre</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {courseBreakdown.map((course, idx) => (
+                                                <tr key={idx} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                                                    <td style={{ padding: '10px' }}>{course.asignatura}</td>
+                                                    <td style={{ padding: '10px', textAlign: 'center', fontFamily: 'monospace' }}>{course.codigo || '-'}</td>
+                                                    <td style={{ padding: '10px', textAlign: 'center' }}>
+                                                        <span style={{
+                                                            background: course.intentos > 1 ? 'rgba(255, 152, 0, 0.2)' : 'rgba(76, 175, 80, 0.2)',
+                                                            padding: '2px 8px',
+                                                            borderRadius: '4px',
+                                                            fontWeight: course.intentos > 1 ? 'bold' : 'normal'
+                                                        }}>
+                                                            {course.intentos}
+                                                        </span>
+                                                    </td>
+                                                    <td style={{ padding: '10px', textAlign: 'center' }}>{course.notaPromedio}</td>
+                                                    <td style={{ padding: '10px', textAlign: 'center' }}>
+                                                        <span style={{
+                                                            background: course.puntajeCriticidad >= 4 ? 'rgba(244, 67, 54, 0.2)' :
+                                                                course.puntajeCriticidad >= 3 ? 'rgba(255, 152, 0, 0.2)' :
+                                                                    'rgba(76, 175, 80, 0.2)',
+                                                            padding: '2px 8px',
+                                                            borderRadius: '4px'
+                                                        }}>
+                                                            {course.puntajeCriticidad}/5
+                                                        </span>
+                                                    </td>
+                                                    <td style={{ padding: '10px', textAlign: 'center' }}>{course.semestreMalla || '-'}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+
             {/* Export Panel */}
             <ExportPanel
                 indicatorResult={indicatorResult}
@@ -280,9 +513,9 @@ export default function Dashboard({ studentRecords, criticalityData, curriculumD
                 <div className="demographic-note">
                     <h4>📋 Datos demográficos utilizados:</h4>
                     <ul>
-                        <li><strong>Género:</strong> {demographicData.genero || 'No especificado'}</li>
-                        <li><strong>Ciudad:</strong> {demographicData.ciudad || 'No especificada'}</li>
-                        <li><strong>Tipo de colegio:</strong> {demographicData.tipoColegio || 'No especificado'}</li>
+                        <li><strong>Género:</strong> {demographicData.genero || 'No especificado'} {audit?.demographic && `(G=${audit.demographic.G})`}</li>
+                        <li><strong>Ciudad:</strong> {demographicData.ciudad || 'No especificada'} {audit?.demographic && `(C=${audit.demographic.C})`}</li>
+                        <li><strong>Tipo de colegio:</strong> {demographicData.tipoColegio || 'No especificado'} {audit?.demographic && `(L=${audit.demographic.L})`}</li>
                     </ul>
                 </div>
             )}

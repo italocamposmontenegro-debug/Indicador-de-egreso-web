@@ -29,7 +29,33 @@ export function parseGradesExcel(file) {
         const workbook = XLSX.read(data, { type: 'array' });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+        // Convert to array of arrays to find header row
+        const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+
+        let headerRowIndex = 0;
+        let headers = [];
+
+        // Find header row by looking for 'RUT' and ('NOTA' or 'ASIGNATURA')
+        for (let i = 0; i < Math.min(20, rawData.length); i++) {
+          const row = rawData[i].map(cell => String(cell).toUpperCase());
+          const hasRut = row.some(cell => cell.includes('RUT'));
+          const hasNota_Asig = row.some(cell => cell.includes('NOTA') || cell.includes('ASIGNATURA') || cell.includes('CODIGO'));
+
+          if (hasRut && hasNota_Asig) {
+            headerRowIndex = i;
+            headers = rawData[i]; // Keep original casing for logging if needed, but we'll normalize later
+            console.log(`[parseGradesExcel] Detected header at row ${i}:`, headers);
+            break;
+          }
+        }
+
+        // Re-parse with explicit range if header found, or use found headers manually
+        // Using sheet_to_json with 'range' option is cleaner
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+          range: headerRowIndex,
+          defval: ''
+        });
 
         const normalizedData = jsonData.map((row) => {
           const normalized = {};
@@ -169,7 +195,7 @@ export function parseGradesExcel(file) {
 
         // Debug útil: % con codigoAsignatura
         const withCode = normalizedData.filter(r => r.codigoAsignatura && String(r.codigoAsignatura).trim() !== '').length;
-        console.log(`[parseGradesExcel] Rows: ${normalizedData.length} | con codigoAsignatura: ${withCode} (${((withCode/Math.max(1,normalizedData.length))*100).toFixed(1)}%)`);
+        console.log(`[parseGradesExcel] Rows: ${normalizedData.length} | con codigoAsignatura: ${withCode} (${((withCode / Math.max(1, normalizedData.length)) * 100).toFixed(1)}%)`);
 
         resolve(normalizedData);
       } catch (error) {
@@ -411,7 +437,7 @@ export function enrichGradesWithTraza(gradesData, curriculumData) {
   });
 
   const inMalla = enriched.filter(r => r.enMalla).length;
-  console.log(`[enrichGradesWithTraza] Total rows: ${enriched.length} | En malla: ${inMalla} (${((inMalla/Math.max(1,enriched.length))*100).toFixed(1)}%)`);
+  console.log(`[enrichGradesWithTraza] Total rows: ${enriched.length} | En malla: ${inMalla} (${((inMalla / Math.max(1, enriched.length)) * 100).toFixed(1)}%)`);
 
   return enriched;
 }

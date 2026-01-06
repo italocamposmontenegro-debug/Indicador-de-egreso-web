@@ -4,73 +4,109 @@
             "codigo": "KIN101",
             "nombre": "Anatomía General",
             "semestre": 1,
-            "criticidad": "muy alta"
+            "criticidad": "muy alta",
+            "Porcentaje_2": 15,
+            "Porcentaje_3": 25,
+            "Porcentaje_4": 35
         },
         {
             "codigo": "KIN102",
             "nombre": "Fisiología Humana",
             "semestre": 1,
-            "criticidad": "muy alta"
+            "criticidad": "muy alta",
+            "Porcentaje_2": 18,
+            "Porcentaje_3": 28,
+            "Porcentaje_4": 38
         },
         {
             "codigo": "KIN103",
             "nombre": "Biología Celular",
             "semestre": 1,
-            "criticidad": "alta"
+            "criticidad": "alta",
+            "Porcentaje_2": 12,
+            "Porcentaje_3": 22,
+            "Porcentaje_4": 32
         },
         {
             "codigo": "KIN104",
             "nombre": "Química General",
             "semestre": 1,
-            "criticidad": "media"
+            "criticidad": "media",
+            "Porcentaje_2": 8,
+            "Porcentaje_3": 12,
+            "Porcentaje_4": 18
         },
         {
             "codigo": "KIN201",
             "nombre": "Biomecánica",
             "semestre": 2,
-            "criticidad": "muy alta"
+            "criticidad": "muy alta",
+            "Porcentaje_2": 20,
+            "Porcentaje_3": 30,
+            "Porcentaje_4": 40
         },
         {
             "codigo": "KIN202",
             "nombre": "Kinesiología Básica",
             "semestre": 2,
-            "criticidad": "muy alta"
+            "criticidad": "muy alta",
+            "Porcentaje_2": 16,
+            "Porcentaje_3": 26,
+            "Porcentaje_4": 36
         },
         {
             "codigo": "KIN203",
             "nombre": "Neurofisiología",
             "semestre": 2,
-            "criticidad": "alta"
+            "criticidad": "alta",
+            "Porcentaje_2": 14,
+            "Porcentaje_3": 24,
+            "Porcentaje_4": 34
         },
         {
             "codigo": "KIN301",
             "nombre": "Evaluación Funcional",
             "semestre": 3,
-            "criticidad": "muy alta"
+            "criticidad": "muy alta",
+            "Porcentaje_2": 22,
+            "Porcentaje_3": 32,
+            "Porcentaje_4": 42
         },
         {
             "codigo": "KIN302",
             "nombre": "Patología General",
             "semestre": 3,
-            "criticidad": "alta"
+            "criticidad": "alta",
+            "Porcentaje_2": 10,
+            "Porcentaje_3": 18,
+            "Porcentaje_4": 28
         },
         {
             "codigo": "KIN401",
             "nombre": "Rehabilitación I",
             "semestre": 4,
-            "criticidad": "muy alta"
+            "criticidad": "muy alta",
+            "Porcentaje_2": 19,
+            "Porcentaje_3": 29,
+            "Porcentaje_4": 39
         },
         {
             "codigo": "KIN402",
             "nombre": "Práctica Clínica I",
             "semestre": 4,
-            "criticidad": "muy alta"
+            "criticidad": "muy alta",
+            "Porcentaje_2": 5,
+            "Porcentaje_3": 10,
+            "Porcentaje_4": 15
         },
         {
             "codigo": "KIN501",
             "nombre": "Kinesiología Deportiva",
             "semestre": 5,
-            "criticidad": "alta"
+            "criticidad": "alta",
+            "Porcentaje_2": 7,
+            "Porcentaje_3": 12,
+            "Porcentaje_4": 20
         }
     ],
     "2019": [
